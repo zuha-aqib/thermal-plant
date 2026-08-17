@@ -4,6 +4,55 @@ from pathlib import Path
 import cv2
 
 
+DEFAULT_OUTPUT_ROOT = "synthetic-moved-videos"
+
+
+def find_raw_videos_ancestor(video_path):
+    """
+    Find the nearest parent directory named 'raw-videos'.
+
+    This lets the synthetic output mirror the same nested folder
+    structure as the source videos.
+    """
+    video_path = Path(video_path).resolve()
+
+    for parent in video_path.parents:
+        if parent.name.lower() == "raw-videos":
+            return parent
+
+    return None
+
+
+def build_output_path(video_path, output_root):
+    """
+    Preserve the folder structure under raw-videos and keep the
+    exact same video filename.
+
+    Example:
+        raw-videos/Furnace/Camera-01/sample.mp4
+
+    becomes:
+        synthetic-moved-videos/Furnace/Camera-01/sample.mp4
+    """
+    video_path = Path(video_path).resolve()
+    output_root = Path(output_root).resolve()
+
+    raw_root = find_raw_videos_ancestor(video_path)
+
+    if raw_root is not None:
+        relative_video = video_path.relative_to(raw_root)
+        output_path = output_root / relative_video
+    else:
+        output_path = output_root / video_path.name
+
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    return output_path
+
+
 # ============================================================
 # SYNTHETIC ACCIDENTAL CAMERA MOVEMENT GENERATOR
 # ============================================================
@@ -74,9 +123,14 @@ def main():
     parser.add_argument("video", help="Source MP4")
 
     parser.add_argument(
-        "--output",
-        default=None,
-        help="Output MP4. Default: <source>_synthetic_camera_bump.mp4",
+        "--output-root",
+        default=DEFAULT_OUTPUT_ROOT,
+        help=(
+            "Root folder for synthetic moved videos. "
+            "Default: synthetic-moved-videos. "
+            "The raw-videos folder structure is mirrored and "
+            "the output keeps the exact same filename."
+        ),
     )
 
     parser.add_argument("--move-at-seconds", type=float, default=4.0)
@@ -90,12 +144,10 @@ def main():
 
     video_path = Path(args.video).resolve()
 
-    if args.output is None:
-        output_path = video_path.with_name(
-            video_path.stem + "_synthetic_camera_bump.mp4"
-        )
-    else:
-        output_path = Path(args.output).resolve()
+    output_path = build_output_path(
+        video_path=video_path,
+        output_root=args.output_root,
+    )
 
     cap = cv2.VideoCapture(str(video_path))
 
