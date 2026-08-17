@@ -1,0 +1,42 @@
+{
+    "video": {
+        "filename": "95.fur incin AB Stacks Thermal.mp4",
+        "width": 1280,
+        "height": 960,
+        "fps": 24.31192660550459,
+        "total_frames": 7420,
+        "reference_frame_number": 0
+    },
+    "scale": {
+        "bar_roi": [
+            1186,
+            234,
+            33,
+            470
+        ],
+        "max_text_roi": [
+            1089,
+            164,
+            130,
+            59
+        ],
+        "min_text_roi": [
+            1102,
+            694,
+            112,
+            41
+        ],
+        "bar_horizontal_inner_fraction": 0.2,
+        "display_decimal_places": 1,
+        "ocr_padding_pixels": 6,
+        "min_ocr_method": "green_difference",
+        "min_ocr_psm": 7,
+        "max_ocr_method": "green_difference",
+        "max_ocr_psm": 7,
+        "reference_ocr_min_temp": 15.6,
+        "reference_ocr_max_temp": 46.9,
+        "reference_ocr_min_text": "15.6",
+        "reference_ocr_max_text": "46.9",
+        "min_scale_span_c": 5.0
+    }
+}
