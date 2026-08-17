@@ -22,6 +22,26 @@ LINE_THICKNESS = 2
 
 
 # ============================================================
+# OCR RETRY SETTINGS
+# ============================================================
+
+# The normal frame uses the OCR method selected during configuration.
+#
+# ONLY when that reading is missing or implausible do we retry the
+# same frame with these alternative preprocessing/PSM combinations.
+# This keeps the full-video run reasonably fast while still giving
+# difficult frames several chances to be read correctly.
+OCR_RETRY_CONFIGS = [
+    ("green_difference", 7),
+    ("green_difference", 8),
+    ("hsv_green", 7),
+    ("green_channel_otsu", 7),
+    ("gray_otsu", 7),
+    ("gray_adaptive", 7),
+]
+
+
+# ============================================================
 # BASIC HELPERS
 # ============================================================
 
@@ -362,6 +382,243 @@ def ocr_temperature(
 # SCALE OCR PASS
 # ============================================================
 
+def _basic_scale_pair_valid(
+    min_value,
+    max_value,
+    min_allowed,
+    max_allowed,
+    min_scale_span,
+):
+    """
+    Basic physical/plausibility validation that does NOT use
+    temporal history.
+    """
+    return (
+        np.isfinite(min_value)
+        and np.isfinite(max_value)
+        and min_allowed <= min_value <= max_allowed
+        and min_allowed <= max_value <= max_allowed
+        and max_value > min_value
+        and (max_value - min_value) >= float(min_scale_span)
+    )
+
+
+def _temporal_scale_pair_valid(
+    min_value,
+    max_value,
+    previous_min,
+    previous_max,
+    max_jump,
+):
+    """
+    Check whether the new OCR reading is close enough to the most
+    recently trusted scale.
+
+    For this thermal camera, the displayed scale changes gradually.
+    A jump such as:
+
+        46.8 -> 467.7
+
+    is therefore treated as OCR corruption, not as a real thermal
+    scale change.
+
+    max_jump applies independently to MIN and MAX.
+    """
+    if previous_min is None or previous_max is None:
+        return True
+
+    return (
+        abs(float(min_value) - float(previous_min)) <= float(max_jump)
+        and
+        abs(float(max_value) - float(previous_max)) <= float(max_jump)
+    )
+
+
+def _ocr_text_quality(text):
+    """
+    Small quality score used only to break ties between multiple
+    plausible OCR candidates.
+
+    A result containing the decimal point is preferred because the
+    camera displays one decimal place.
+    """
+    text = str(text or "")
+
+    score = 0.0
+
+    if "." in text:
+        score += 2.0
+
+    digit_count = sum(
+        character.isdigit()
+        for character in text
+    )
+
+    score += min(digit_count, 4) * 0.25
+
+    return score
+
+
+def _collect_ocr_candidates(
+    frame,
+    roi,
+    decimal_places,
+    primary_method,
+    primary_psm,
+    padding,
+):
+    """
+    Run the configured OCR method first, then alternative methods.
+
+    Duplicate method/PSM combinations are skipped.
+
+    Returns:
+        list of candidate dictionaries
+    """
+    configurations = [
+        (primary_method, int(primary_psm)),
+        *OCR_RETRY_CONFIGS,
+    ]
+
+    seen = set()
+    candidates = []
+
+    for method, psm in configurations:
+        key = (method, int(psm))
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+
+        value, text, prepared = ocr_temperature(
+            frame,
+            roi,
+            decimal_places=decimal_places,
+            method=method,
+            psm=psm,
+            padding=padding,
+        )
+
+        candidates.append({
+            "value": value,
+            "text": text,
+            "method": method,
+            "psm": int(psm),
+            "prepared": prepared,
+            "is_primary": (
+                method == primary_method
+                and int(psm) == int(primary_psm)
+            ),
+        })
+
+    return candidates
+
+
+def _choose_temporally_plausible_pair(
+    min_candidates,
+    max_candidates,
+    previous_min,
+    previous_max,
+    min_allowed,
+    max_allowed,
+    min_scale_span,
+    max_jump,
+):
+    """
+    Choose the best MIN/MAX pair among all OCR candidates.
+
+    Preference order:
+      1) Pair must be physically valid.
+      2) Pair must be close to the previous trusted scale.
+      3) Pair closest to the previous trusted values wins.
+      4) Decimal-looking OCR text is used only as a tie-breaker.
+    """
+    valid_pairs = []
+
+    for min_candidate in min_candidates:
+        min_value = min_candidate["value"]
+
+        if not np.isfinite(min_value):
+            continue
+
+        for max_candidate in max_candidates:
+            max_value = max_candidate["value"]
+
+            if not _basic_scale_pair_valid(
+                min_value=min_value,
+                max_value=max_value,
+                min_allowed=min_allowed,
+                max_allowed=max_allowed,
+                min_scale_span=min_scale_span,
+            ):
+                continue
+
+            if not _temporal_scale_pair_valid(
+                min_value=min_value,
+                max_value=max_value,
+                previous_min=previous_min,
+                previous_max=previous_max,
+                max_jump=max_jump,
+            ):
+                continue
+
+            # Primary goal is temporal closeness.
+            if previous_min is None or previous_max is None:
+                distance = 0.0
+            else:
+                distance = (
+                    abs(float(min_value) - float(previous_min))
+                    +
+                    abs(float(max_value) - float(previous_max))
+                )
+
+            quality = (
+                _ocr_text_quality(min_candidate["text"])
+                +
+                _ocr_text_quality(max_candidate["text"])
+            )
+
+            # Smaller tuple is better.
+            #
+            # - distance dominates
+            # - negative quality means higher quality wins ties
+            # - primary OCR receives a tiny preference if equally good
+            primary_penalty = (
+                0
+                if (
+                    min_candidate["is_primary"]
+                    and max_candidate["is_primary"]
+                )
+                else 1
+            )
+
+            score = (
+                distance,
+                -quality,
+                primary_penalty,
+            )
+
+            valid_pairs.append(
+                (
+                    score,
+                    min_candidate,
+                    max_candidate,
+                )
+            )
+
+    if not valid_pairs:
+        return None
+
+    valid_pairs.sort(
+        key=lambda item: item[0]
+    )
+
+    _, best_min, best_max = valid_pairs[0]
+
+    return best_min, best_max
+
+
 def scan_dynamic_scale(
     video_path,
     scale_config,
@@ -372,165 +629,658 @@ def scan_dynamic_scale(
     min_allowed=-100.0,
     max_allowed=1000.0,
     min_scale_span=5.0,
-    debug_invalid_limit=20,
+    max_jump=2.5,
+    debug_invalid_limit=30,
 ):
     """
     FIRST PASS through the video.
 
-    Read the dynamic scale MIN and MAX text values.
+    Robust dynamic-scale strategy
+    -----------------------------
+    1. Start from the correctly configured reference-frame scale.
+    2. OCR approximately a few times per second.
+    3. Accept a reading only if it is physically valid AND close to
+       the last trusted MIN/MAX values.
+    4. If the configured OCR method gives an implausible result,
+       retry THE SAME FRAME with several alternative OCR pipelines.
+    5. If every OCR attempt is still unreliable, HOLD the previous
+       trusted scale instead of allowing a fake spike such as 467 C.
+    6. Frames between OCR sampling points also use the latest trusted
+       scale.
 
-    We do this as a separate pass because OCR can occasionally miss
-    a frame. After scanning, missing values can be interpolated from
-    held valid readings rather than letting one OCR failure
-    destroy the temperature calculation for that frame.
+    This means a single OCR failure cannot ruin ROI averages/maxima.
     """
-    cap = cv2.VideoCapture(str(video_path))
+
+    video_path = Path(video_path)
+    output_dir = Path(output_dir)
+
+    cap = cv2.VideoCapture(
+        str(video_path)
+    )
 
     if not cap.isOpened():
-        raise RuntimeError(f"Could not open video: {video_path}")
+        raise RuntimeError(
+            f"Could not open video: {video_path}"
+        )
 
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps = float(cap.get(cv2.CAP_PROP_FPS))
+    total_frames = int(
+        cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    )
+
+    fps = float(
+        cap.get(cv2.CAP_PROP_FPS)
+    )
 
     if end_frame is None:
         end_frame = total_frames - 1
 
-    start_frame = max(0, int(start_frame))
-    end_frame = min(int(end_frame), total_frames - 1)
+    start_frame = max(
+        0,
+        int(start_frame),
+    )
+
+    end_frame = min(
+        int(end_frame),
+        total_frames - 1,
+    )
 
     if end_frame < start_frame:
-        raise ValueError("end_frame must be >= start_frame")
+        cap.release()
+        raise ValueError(
+            "end_frame must be >= start_frame"
+        )
 
-    frame_count = end_frame - start_frame + 1
+    frame_count = (
+        end_frame - start_frame + 1
+    )
 
-    raw_min = np.full(frame_count, np.nan, dtype=np.float64)
-    raw_max = np.full(frame_count, np.nan, dtype=np.float64)
+    # --------------------------------------------------------
+    # Arrays saved for audit/debugging.
+    # --------------------------------------------------------
 
-    raw_min_text = [""] * frame_count
-    raw_max_text = [""] * frame_count
+    primary_min = np.full(
+        frame_count,
+        np.nan,
+        dtype=np.float64,
+    )
 
-    min_roi = scale_config["scale"]["min_text_roi"]
-    max_roi = scale_config["scale"]["max_text_roi"]
+    primary_max = np.full(
+        frame_count,
+        np.nan,
+        dtype=np.float64,
+    )
+
+    accepted_sample_min = np.full(
+        frame_count,
+        np.nan,
+        dtype=np.float64,
+    )
+
+    accepted_sample_max = np.full(
+        frame_count,
+        np.nan,
+        dtype=np.float64,
+    )
+
+    # Clean values exist for EVERY video frame.
+    clean_min = np.full(
+        frame_count,
+        np.nan,
+        dtype=np.float64,
+    )
+
+    clean_max = np.full(
+        frame_count,
+        np.nan,
+        dtype=np.float64,
+    )
+
+    primary_min_text = [""] * frame_count
+    primary_max_text = [""] * frame_count
+
+    accepted_min_text = [""] * frame_count
+    accepted_max_text = [""] * frame_count
+
+    accepted_min_method = [""] * frame_count
+    accepted_max_method = [""] * frame_count
+
+    status = ["UNSAMPLED"] * frame_count
+
+    retry_attempted = np.zeros(
+        frame_count,
+        dtype=np.uint8,
+    )
+
+    # --------------------------------------------------------
+    # OCR configuration.
+    # --------------------------------------------------------
+
+    min_roi = (
+        scale_config["scale"]["min_text_roi"]
+    )
+
+    max_roi = (
+        scale_config["scale"]["max_text_roi"]
+    )
+
     decimal_places = int(
-        scale_config["scale"].get("display_decimal_places", 1)
+        scale_config["scale"].get(
+            "display_decimal_places",
+            1,
+        )
     )
 
-    # The configuration tool tests multiple OCR pipelines on the
-    # reference frame and stores the best choice for MIN and MAX.
-    min_ocr_method = scale_config["scale"].get(
-        "min_ocr_method",
-        "green_difference",
+    min_ocr_method = (
+        scale_config["scale"].get(
+            "min_ocr_method",
+            "green_difference",
+        )
     )
-    max_ocr_method = scale_config["scale"].get(
-        "max_ocr_method",
-        "green_difference",
+
+    max_ocr_method = (
+        scale_config["scale"].get(
+            "max_ocr_method",
+            "green_difference",
+        )
     )
 
     min_ocr_psm = int(
-        scale_config["scale"].get("min_ocr_psm", 7)
+        scale_config["scale"].get(
+            "min_ocr_psm",
+            7,
+        )
     )
+
     max_ocr_psm = int(
-        scale_config["scale"].get("max_ocr_psm", 7)
+        scale_config["scale"].get(
+            "max_ocr_psm",
+            7,
+        )
     )
 
     ocr_padding = int(
-        scale_config["scale"].get("ocr_padding_pixels", 6)
+        scale_config["scale"].get(
+            "ocr_padding_pixels",
+            6,
+        )
+    )
+
+    # --------------------------------------------------------
+    # Trusted starting scale from configuration.
+    #
+    # configure_thermal_scale_v2.py already validated this exact
+    # reference frame using multiple OCR methods, so it is a much
+    # stronger starting point than an arbitrary first video OCR.
+    # --------------------------------------------------------
+
+    reference_min = (
+        scale_config["scale"].get(
+            "reference_ocr_min_temp"
+        )
+    )
+
+    reference_max = (
+        scale_config["scale"].get(
+            "reference_ocr_max_temp"
+        )
+    )
+
+    if (
+        reference_min is not None
+        and reference_max is not None
+        and _basic_scale_pair_valid(
+            min_value=float(reference_min),
+            max_value=float(reference_max),
+            min_allowed=min_allowed,
+            max_allowed=max_allowed,
+            min_scale_span=min_scale_span,
+        )
+    ):
+        last_good_min = float(
+            reference_min
+        )
+
+        last_good_max = float(
+            reference_max
+        )
+
+        print(
+            "\nTrusted scale seed from configuration:"
+            f"\n  MIN = {last_good_min:.1f} C"
+            f"\n  MAX = {last_good_max:.1f} C"
+        )
+
+    else:
+        last_good_min = None
+        last_good_max = None
+
+        print(
+            "\nWarning: scale_config.json does not contain "
+            "a usable trusted reference MIN/MAX."
+            "\nThe first fully valid OCR pair will initialize "
+            "the temporal filter."
+        )
+
+    print(
+        "\nConfigured primary OCR:"
+        f"\n  MIN = {min_ocr_method}/PSM{min_ocr_psm}"
+        f"\n  MAX = {max_ocr_method}/PSM{max_ocr_psm}"
+        f"\nMaximum accepted change per OCR sample: "
+        f"{float(max_jump):.2f} C"
+    )
+
+    # --------------------------------------------------------
+    # Debug folder for frames where primary OCR was rejected.
+    # --------------------------------------------------------
+
+    invalid_debug_dir = (
+        output_dir
+        / "ocr_debug_rejected"
+    )
+
+    invalid_debug_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    invalid_saved = 0
+
+    # --------------------------------------------------------
+    # Counters shown after PASS 1.
+    # --------------------------------------------------------
+
+    counters = {
+        "sampled": 0,
+        "accepted_primary": 0,
+        "accepted_retry": 0,
+        "held_previous": 0,
+        "initialized_without_reference": 0,
+    }
+
+    cap.set(
+        cv2.CAP_PROP_POS_FRAMES,
+        start_frame,
     )
 
     print(
-        f"OCR methods: MIN={min_ocr_method}/PSM{min_ocr_psm}, "
-        f"MAX={max_ocr_method}/PSM{max_ocr_psm}"
+        "\nPASS 1/2: Reading + validating dynamic scale labels..."
     )
 
-    invalid_debug_dir = output_dir / "ocr_debug_invalid"
-    invalid_debug_dir.mkdir(parents=True, exist_ok=True)
-    invalid_saved = 0
+    print(
+        f"Frames: {start_frame} to {end_frame}"
+    )
 
-    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-
-    print("\nPASS 1/2: Reading dynamic scale labels...")
-    print(f"Frames: {start_frame} to {end_frame}")
-    print(f"OCR every {ocr_every} frame(s)")
+    print(
+        f"OCR every {ocr_every} frame(s)"
+    )
 
     for local_idx in range(frame_count):
-        frame_number = start_frame + local_idx
+        frame_number = (
+            start_frame + local_idx
+        )
 
         ok, frame = cap.read()
 
         if not ok:
-            print(f"\nWarning: could not read frame {frame_number}")
+            print(
+                f"\nWarning: could not read frame "
+                f"{frame_number}"
+            )
             break
 
-        # Skip OCR on unsampled frames when --ocr-every > 1.
-        # Those gaps are filled by interpolation after the scan.
         should_ocr = (
-            local_idx % max(1, int(ocr_every)) == 0
+            local_idx
+            % max(1, int(ocr_every))
+            == 0
             or frame_number == end_frame
         )
 
         if should_ocr:
-            min_value, min_text, min_prepared = ocr_temperature(
-                frame,
-                min_roi,
-                decimal_places=decimal_places,
-                method=min_ocr_method,
-                psm=min_ocr_psm,
-                padding=ocr_padding,
+            counters["sampled"] += 1
+
+            # ------------------------------------------------
+            # PRIMARY OCR
+            # ------------------------------------------------
+
+            min_value, min_text, min_prepared = (
+                ocr_temperature(
+                    frame,
+                    min_roi,
+                    decimal_places=decimal_places,
+                    method=min_ocr_method,
+                    psm=min_ocr_psm,
+                    padding=ocr_padding,
+                )
             )
 
-            max_value, max_text, max_prepared = ocr_temperature(
-                frame,
-                max_roi,
-                decimal_places=decimal_places,
-                method=max_ocr_method,
-                psm=max_ocr_psm,
-                padding=ocr_padding,
+            max_value, max_text, max_prepared = (
+                ocr_temperature(
+                    frame,
+                    max_roi,
+                    decimal_places=decimal_places,
+                    method=max_ocr_method,
+                    psm=max_ocr_psm,
+                    padding=ocr_padding,
+                )
             )
 
-            raw_min_text[local_idx] = min_text
-            raw_max_text[local_idx] = max_text
+            primary_min[
+                local_idx
+            ] = min_value
 
-            # Basic physical/plausibility validation.
-            pair_valid = (
-                np.isfinite(min_value)
-                and np.isfinite(max_value)
-                and min_allowed <= min_value <= max_allowed
-                and min_allowed <= max_value <= max_allowed
-                and max_value > min_value
-                and (max_value - min_value) >= float(min_scale_span)
+            primary_max[
+                local_idx
+            ] = max_value
+
+            primary_min_text[
+                local_idx
+            ] = min_text
+
+            primary_max_text[
+                local_idx
+            ] = max_text
+
+            primary_basic_valid = (
+                _basic_scale_pair_valid(
+                    min_value=min_value,
+                    max_value=max_value,
+                    min_allowed=min_allowed,
+                    max_allowed=max_allowed,
+                    min_scale_span=min_scale_span,
+                )
             )
 
-            if pair_valid:
-                raw_min[local_idx] = min_value
-                raw_max[local_idx] = max_value
+            primary_temporal_valid = (
+                primary_basic_valid
+                and
+                _temporal_scale_pair_valid(
+                    min_value=min_value,
+                    max_value=max_value,
+                    previous_min=last_good_min,
+                    previous_max=last_good_max,
+                    max_jump=max_jump,
+                )
+            )
+
+            # ------------------------------------------------
+            # CASE A: primary OCR is already trustworthy.
+            # ------------------------------------------------
+
+            if primary_temporal_valid:
+                chosen_min = {
+                    "value": float(min_value),
+                    "text": min_text,
+                    "method": min_ocr_method,
+                    "psm": min_ocr_psm,
+                    "is_primary": True,
+                }
+
+                chosen_max = {
+                    "value": float(max_value),
+                    "text": max_text,
+                    "method": max_ocr_method,
+                    "psm": max_ocr_psm,
+                    "is_primary": True,
+                }
+
+                sample_status = (
+                    "ACCEPT_PRIMARY"
+                )
+
+                counters[
+                    "accepted_primary"
+                ] += 1
+
+            # ------------------------------------------------
+            # CASE B: primary OCR is bad/suspicious.
+            #
+            # Retry this SAME frame using multiple alternate OCR
+            # preprocessing methods.
+            # ------------------------------------------------
 
             else:
-                # Save a few failed OCR examples for diagnosis.
-                if invalid_saved < debug_invalid_limit:
-                    if min_prepared is not None:
-                        cv2.imwrite(
-                            str(
-                                invalid_debug_dir
-                                / f"frame_{frame_number:06d}_MIN.png"
-                            ),
-                            min_prepared,
+                retry_attempted[
+                    local_idx
+                ] = 1
+
+                min_candidates = (
+                    _collect_ocr_candidates(
+                        frame=frame,
+                        roi=min_roi,
+                        decimal_places=decimal_places,
+                        primary_method=min_ocr_method,
+                        primary_psm=min_ocr_psm,
+                        padding=ocr_padding,
+                    )
+                )
+
+                max_candidates = (
+                    _collect_ocr_candidates(
+                        frame=frame,
+                        roi=max_roi,
+                        decimal_places=decimal_places,
+                        primary_method=max_ocr_method,
+                        primary_psm=max_ocr_psm,
+                        padding=ocr_padding,
+                    )
+                )
+
+                best_pair = (
+                    _choose_temporally_plausible_pair(
+                        min_candidates=min_candidates,
+                        max_candidates=max_candidates,
+                        previous_min=last_good_min,
+                        previous_max=last_good_max,
+                        min_allowed=min_allowed,
+                        max_allowed=max_allowed,
+                        min_scale_span=min_scale_span,
+                        max_jump=max_jump,
+                    )
+                )
+
+                if best_pair is not None:
+                    chosen_min, chosen_max = (
+                        best_pair
+                    )
+
+                    sample_status = (
+                        "ACCEPT_RETRY"
+                    )
+
+                    counters[
+                        "accepted_retry"
+                    ] += 1
+
+                else:
+                    chosen_min = None
+                    chosen_max = None
+
+                    # ----------------------------------------
+                    # No trustworthy OCR candidate.
+                    #
+                    # HOLD the last trusted scale rather than
+                    # accepting a catastrophic spike.
+                    # ----------------------------------------
+
+                    if (
+                        last_good_min is not None
+                        and last_good_max is not None
+                    ):
+                        sample_status = (
+                            "HOLD_PREVIOUS"
                         )
 
-                    if max_prepared is not None:
-                        cv2.imwrite(
-                            str(
-                                invalid_debug_dir
-                                / f"frame_{frame_number:06d}_MAX.png"
-                            ),
-                            max_prepared,
+                        counters[
+                            "held_previous"
+                        ] += 1
+
+                    else:
+                        # We have no history AND no valid OCR.
+                        # Refuse to guess.
+                        cap.release()
+
+                        raise RuntimeError(
+                            "The first sampled frame could not "
+                            "produce a trustworthy scale and "
+                            "there is no trusted reference value "
+                            "in scale_config.json."
                         )
 
-                    invalid_saved += 1
+            # ------------------------------------------------
+            # Commit accepted sample.
+            # ------------------------------------------------
 
-        if local_idx % 100 == 0 or local_idx == frame_count - 1:
-            pct = 100.0 * (local_idx + 1) / frame_count
+            if chosen_min is not None:
+                last_good_min = float(
+                    chosen_min["value"]
+                )
+
+                last_good_max = float(
+                    chosen_max["value"]
+                )
+
+                accepted_sample_min[
+                    local_idx
+                ] = last_good_min
+
+                accepted_sample_max[
+                    local_idx
+                ] = last_good_max
+
+                accepted_min_text[
+                    local_idx
+                ] = chosen_min["text"]
+
+                accepted_max_text[
+                    local_idx
+                ] = chosen_max["text"]
+
+                accepted_min_method[
+                    local_idx
+                ] = (
+                    f"{chosen_min['method']}"
+                    f"/PSM{chosen_min['psm']}"
+                )
+
+                accepted_max_method[
+                    local_idx
+                ] = (
+                    f"{chosen_max['method']}"
+                    f"/PSM{chosen_max['psm']}"
+                )
+
+            status[
+                local_idx
+            ] = sample_status
+
+            # ------------------------------------------------
+            # Save rejected-primary diagnostics.
+            #
+            # Even if retry later succeeded, the primary OCR was
+            # suspicious, so keeping a few examples is useful.
+            # ------------------------------------------------
+
+            if (
+                not primary_temporal_valid
+                and invalid_saved
+                < debug_invalid_limit
+            ):
+                prefix = (
+                    f"frame_{frame_number:06d}"
+                )
+
+                if min_prepared is not None:
+                    cv2.imwrite(
+                        str(
+                            invalid_debug_dir
+                            / f"{prefix}_PRIMARY_MIN.png"
+                        ),
+                        min_prepared,
+                    )
+
+                if max_prepared is not None:
+                    cv2.imwrite(
+                        str(
+                            invalid_debug_dir
+                            / f"{prefix}_PRIMARY_MAX.png"
+                        ),
+                        max_prepared,
+                    )
+
+                # Also save the original frame text crops.
+                min_original = (
+                    crop_roi_with_padding(
+                        frame,
+                        min_roi,
+                        padding=ocr_padding,
+                    )
+                )
+
+                max_original = (
+                    crop_roi_with_padding(
+                        frame,
+                        max_roi,
+                        padding=ocr_padding,
+                    )
+                )
+
+                cv2.imwrite(
+                    str(
+                        invalid_debug_dir
+                        / f"{prefix}_ORIGINAL_MIN.png"
+                    ),
+                    min_original,
+                )
+
+                cv2.imwrite(
+                    str(
+                        invalid_debug_dir
+                        / f"{prefix}_ORIGINAL_MAX.png"
+                    ),
+                    max_original,
+                )
+
+                invalid_saved += 1
+
+        # ----------------------------------------------------
+        # Every single frame gets the most recent trusted scale.
+        #
+        # This is what keeps output duration/FPS independent from
+        # the slower OCR sampling rate.
+        # ----------------------------------------------------
+
+        if (
+            last_good_min is None
+            or last_good_max is None
+        ):
+            cap.release()
+
+            raise RuntimeError(
+                "No trustworthy thermal scale is available "
+                f"for frame {frame_number}."
+            )
+
+        clean_min[
+            local_idx
+        ] = last_good_min
+
+        clean_max[
+            local_idx
+        ] = last_good_max
+
+        if (
+            local_idx % 100 == 0
+            or local_idx == frame_count - 1
+        ):
+            pct = (
+                100.0
+                * (local_idx + 1)
+                / frame_count
+            )
+
             print(
-                f"\rScale OCR: {local_idx + 1}/{frame_count} "
+                f"\rScale OCR: "
+                f"{local_idx + 1}/{frame_count} "
                 f"({pct:.1f}%)",
                 end="",
                 flush=True,
@@ -540,112 +1290,221 @@ def scan_dynamic_scale(
     print()
 
     # --------------------------------------------------------
-    # Interpolate missing readings.
+    # Final sanity check.
     # --------------------------------------------------------
-    def fill_missing_scale_values(values):
-        """
-        Fill missing OCR readings using a held-value strategy.
 
-        The camera's displayed scale changes in discrete steps. Linear
-        interpolation can invent scale values that were never displayed.
-        We therefore:
-          1. back-fill any gap before the first valid OCR result,
-          2. forward-fill later missing frames with the most recently
-             observed valid value.
-
-        When OCR is sampled a few times per second this preserves the
-        piecewise-constant behavior of the on-screen scale much better.
-        """
-        values = values.astype(np.float64).copy()
-        valid_indices = np.flatnonzero(
-            np.isfinite(values)
-        )
-
-        if len(valid_indices) == 0:
-            raise RuntimeError(
-                "OCR could not read ANY valid scale values. "
-                "The script refused to guess. "
-                "Re-run configure_thermal_scale_v2.py and inspect "
-                "the saved OCR diagnostic crops."
-            )
-
-        first = int(valid_indices[0])
-
-        # Frames before the first sampled success use the first valid
-        # observed scale value.
-        values[:first] = values[first]
-
-        last_value = values[first]
-
-        for idx in range(first, len(values)):
-            if np.isfinite(values[idx]):
-                last_value = values[idx]
-            else:
-                values[idx] = last_value
-
-        return values
-
-
-    clean_min = fill_missing_scale_values(raw_min)
-    clean_max = fill_missing_scale_values(raw_max)
-
-    # Final sanity check after interpolation.
-    bad_order = clean_max <= clean_min
-
-    if np.any(bad_order):
+    if np.any(
+        clean_max <= clean_min
+    ):
         raise RuntimeError(
-            "Some interpolated frames have max_temp <= min_temp. "
+            "Some cleaned frames have max_temp <= min_temp. "
             "Check scale OCR results before proceeding."
         )
 
     # --------------------------------------------------------
-    # Save the complete OCR audit trail.
+    # Save COMPLETE OCR audit trail.
     # --------------------------------------------------------
-    scale_csv_path = output_dir / "scale_readings.csv"
 
-    with open(scale_csv_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
+    scale_csv_path = (
+        output_dir
+        / "scale_readings.csv"
+    )
+
+    with open(
+        scale_csv_path,
+        "w",
+        newline="",
+        encoding="utf-8",
+    ) as file:
+        writer = csv.writer(file)
 
         writer.writerow([
             "frame",
             "timestamp_seconds",
-            "raw_min_temp",
-            "raw_max_temp",
-            "clean_min_temp",
-            "clean_max_temp",
-            "raw_min_text",
-            "raw_max_text",
-            "ocr_pair_valid",
+            "was_ocr_sampled",
+
+            "primary_min_temp",
+            "primary_max_temp",
+            "primary_min_text",
+            "primary_max_text",
+
+            "accepted_sample_min_temp",
+            "accepted_sample_max_temp",
+            "accepted_min_text",
+            "accepted_max_text",
+            "accepted_min_method",
+            "accepted_max_method",
+
+            "clean_min_temp_used",
+            "clean_max_temp_used",
+
+            "status",
+            "retry_attempted",
         ])
 
-        for local_idx in range(frame_count):
-            frame_number = start_frame + local_idx
+        for local_idx in range(
+            frame_count
+        ):
+            frame_number = (
+                start_frame + local_idx
+            )
 
             writer.writerow([
                 frame_number,
-                frame_number / fps if fps > 0 else "",
-                "" if not np.isfinite(raw_min[local_idx]) else raw_min[local_idx],
-                "" if not np.isfinite(raw_max[local_idx]) else raw_max[local_idx],
-                clean_min[local_idx],
-                clean_max[local_idx],
-                raw_min_text[local_idx],
-                raw_max_text[local_idx],
+                (
+                    frame_number / fps
+                    if fps > 0
+                    else ""
+                ),
                 int(
-                    np.isfinite(raw_min[local_idx])
-                    and np.isfinite(raw_max[local_idx])
+                    status[local_idx]
+                    != "UNSAMPLED"
+                ),
+
+                (
+                    ""
+                    if not np.isfinite(
+                        primary_min[local_idx]
+                    )
+                    else primary_min[
+                        local_idx
+                    ]
+                ),
+
+                (
+                    ""
+                    if not np.isfinite(
+                        primary_max[local_idx]
+                    )
+                    else primary_max[
+                        local_idx
+                    ]
+                ),
+
+                primary_min_text[
+                    local_idx
+                ],
+
+                primary_max_text[
+                    local_idx
+                ],
+
+                (
+                    ""
+                    if not np.isfinite(
+                        accepted_sample_min[
+                            local_idx
+                        ]
+                    )
+                    else accepted_sample_min[
+                        local_idx
+                    ]
+                ),
+
+                (
+                    ""
+                    if not np.isfinite(
+                        accepted_sample_max[
+                            local_idx
+                        ]
+                    )
+                    else accepted_sample_max[
+                        local_idx
+                    ]
+                ),
+
+                accepted_min_text[
+                    local_idx
+                ],
+
+                accepted_max_text[
+                    local_idx
+                ],
+
+                accepted_min_method[
+                    local_idx
+                ],
+
+                accepted_max_method[
+                    local_idx
+                ],
+
+                clean_min[
+                    local_idx
+                ],
+
+                clean_max[
+                    local_idx
+                ],
+
+                status[
+                    local_idx
+                ],
+
+                int(
+                    retry_attempted[
+                        local_idx
+                    ]
                 ),
             ])
 
-    valid_pairs = int(
-        np.count_nonzero(np.isfinite(raw_min) & np.isfinite(raw_max))
+    # --------------------------------------------------------
+    # OCR reliability summary.
+    # --------------------------------------------------------
+
+    sampled = counters["sampled"]
+
+    accepted_primary = (
+        counters["accepted_primary"]
     )
 
-    sampled_frames = int(
-        math.ceil(frame_count / max(1, int(ocr_every)))
+    accepted_retry = (
+        counters["accepted_retry"]
     )
 
-    print(f"Valid OCR pairs: {valid_pairs}/{sampled_frames} sampled frames")
-    print(f"Scale audit CSV: {scale_csv_path}")
+    held_previous = (
+        counters["held_previous"]
+    )
+
+    accepted_total = (
+        accepted_primary
+        + accepted_retry
+    )
+
+    print("\nOCR VALIDATION SUMMARY")
+    print("-" * 52)
+    print(
+        f"OCR samples attempted : {sampled}"
+    )
+    print(
+        f"Accepted directly     : "
+        f"{accepted_primary}"
+    )
+    print(
+        f"Accepted after retry  : "
+        f"{accepted_retry}"
+    )
+    print(
+        f"Held previous scale   : "
+        f"{held_previous}"
+    )
+
+    if sampled > 0:
+        print(
+            f"Accepted OCR rate     : "
+            f"{100.0 * accepted_total / sampled:.1f}%"
+        )
+
+    print(
+        f"Scale audit CSV       : "
+        f"{scale_csv_path}"
+    )
+
+    if invalid_saved > 0:
+        print(
+            f"Rejected OCR examples : "
+            f"{invalid_debug_dir}"
+        )
 
     return {
         "fps": fps,
@@ -654,8 +1513,12 @@ def scan_dynamic_scale(
         "end_frame": end_frame,
         "clean_min": clean_min,
         "clean_max": clean_max,
-        "raw_min": raw_min,
-        "raw_max": raw_max,
+
+        # Primary raw OCR arrays are returned for debugging only.
+        "raw_min": primary_min,
+        "raw_max": primary_max,
+
+        "status": status,
     }
 
 
@@ -1352,6 +2215,19 @@ def main():
     )
 
     parser.add_argument(
+        "--max-scale-jump",
+        type=float,
+        default=2.5,
+        help=(
+            "Maximum allowed change in either scale MIN or MAX "
+            "between consecutive OCR samples. Default: 2.5 C. "
+            "If primary OCR exceeds this, the same frame is retried "
+            "with alternate OCR methods. If all retries still fail, "
+            "the previous trusted scale is held."
+        ),
+    )
+
+    parser.add_argument(
         "--no-video",
         action="store_true",
         help=(
@@ -1500,6 +2376,10 @@ def main():
         min_allowed=float(args.min_allowed_temp),
         max_allowed=float(args.max_allowed_temp),
         min_scale_span=float(args.min_scale_span),
+        max_jump=max(
+            0.0,
+            float(args.max_scale_jump),
+        ),
     )
 
     # --------------------------------------------------------
