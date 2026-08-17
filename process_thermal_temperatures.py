@@ -43,28 +43,35 @@ def parse_temperature(text, decimal_places=1):
     """
     Convert OCR output to a temperature float.
 
-    The thermal-camera display in the example always shows one
-    decimal place, e.g.:
+    IMPORTANT FIX:
+    The old version treated a one-digit OCR result such as "1" as
+    0.1 C and "8" as 0.8 C. That is dangerous because a partially
+    read value like 15.6 C can easily be reduced to a single digit
+    by OCR.
 
-        46.7 C
-        15.4 C
+    New rule:
+      - If a decimal point is present, parse normally.
+      - If the decimal point is missing, only restore it when the
+        OCR result contains enough digits to plausibly represent
+        the complete display value.
 
-    OCR occasionally misses the decimal point and returns '467'.
-    When decimal_places=1, '467' is therefore interpreted as 46.7.
+    For one decimal place:
+        "156" -> 15.6
+        "469" -> 46.9
 
-    Returns:
-        float on success
-        np.nan on failure
+    But:
+        "1"   -> INVALID
+        "8"   -> INVALID
+        "15"  -> INVALID
+
+    Returning NaN is much safer than silently inventing 0.1 C.
     """
     if text is None:
         return np.nan
 
     cleaned = text.strip()
-
-    # Keep only digits, minus sign and decimal point.
     cleaned = re.sub(r"[^0-9.\-]", "", cleaned)
 
-    # Find the first plausible numeric token.
     match = re.search(r"-?\d+(?:\.\d+)?", cleaned)
 
     if not match:
@@ -73,20 +80,27 @@ def parse_temperature(text, decimal_places=1):
     token = match.group(0)
 
     try:
-        # If OCR saw the decimal point normally, simply parse it.
         if "." in token:
             return float(token)
 
-        # If the display is known to use a fixed number of decimals,
-        # restore the missing decimal point.
         if decimal_places > 0:
             sign = -1.0 if token.startswith("-") else 1.0
             digits = token.lstrip("-")
 
-            if not digits:
+            # Require at least:
+            #   two whole-number digits + the requested decimals.
+            #
+            # With one decimal place that means at least 3 digits:
+            #   156 -> 15.6
+            #   469 -> 46.9
+            minimum_digits = decimal_places + 2
+
+            if len(digits) < minimum_digits:
                 return np.nan
 
-            return sign * (int(digits) / (10 ** decimal_places))
+            return sign * (
+                int(digits) / (10 ** decimal_places)
+            )
 
         return float(token)
 
@@ -98,86 +112,53 @@ def parse_temperature(text, decimal_places=1):
 # OCR PREPROCESSING
 # ============================================================
 
-def prepare_temperature_text_crop(crop):
+def crop_roi_with_padding(frame, roi, padding=0):
     """
-    Prepare a small scale-label crop for Tesseract OCR.
+    Crop [x, y, width, height] while expanding it slightly.
 
-    The sample footage uses GREEN temperature text on a dark
-    background. We therefore first try a green-dominance mask.
-
-    If the crop does not contain enough green pixels, the function
-    falls back to grayscale thresholding.
-
-    Tesseract generally works better on enlarged black text over a
-    clean white background, so that is what this function creates.
+    A few pixels of padding are useful because a tight manual crop
+    can accidentally clip the first digit, which is exactly the kind
+    of failure that can turn 15.6 into "6" or 46.9 into "9".
     """
-    if crop is None or crop.size == 0:
+    x, y, w, h = [int(v) for v in roi]
+    padding = max(0, int(padding))
+
+    x1 = max(0, x - padding)
+    y1 = max(0, y - padding)
+    x2 = min(frame.shape[1], x + w + padding)
+    y2 = min(frame.shape[0], y + h + padding)
+
+    return frame[y1:y2, x1:x2]
+
+
+def _finish_binary_for_tesseract(binary):
+    """
+    Normalize any binary text mask to:
+        BLACK text on WHITE background,
+    enlarge it, and add a white border.
+    """
+    if binary is None or binary.size == 0:
         return None
 
-    # Split OpenCV BGR channels.
-    b, g, r = cv2.split(crop)
+    # If the image is mostly dark, it probably contains white text
+    # on a black background. Invert it for Tesseract.
+    if float(np.mean(binary)) < 127.0:
+        binary = cv2.bitwise_not(binary)
 
-    # Detect pixels where green is meaningfully stronger than both
-    # red and blue. The constants are intentionally modest because
-    # video compression can alter the exact RGB values.
-    green_mask = (
-        (g.astype(np.int16) > r.astype(np.int16) + 10)
-        & (g.astype(np.int16) > b.astype(np.int16) + 10)
-        & (g > 70)
-    )
-
-    green_count = int(np.count_nonzero(green_mask))
-
-    if green_count >= 10:
-        # White background, black detected text.
-        binary = np.full(crop.shape[:2], 255, dtype=np.uint8)
-        binary[green_mask] = 0
-
-        # Light morphological closing can reconnect broken strokes
-        # caused by compression without heavily changing the digits.
-        kernel = np.ones((2, 2), dtype=np.uint8)
-        binary = cv2.morphologyEx(
-            binary,
-            cv2.MORPH_CLOSE,
-            kernel,
-            iterations=1,
-        )
-
-    else:
-        # Fallback for videos where the numeric labels are not green.
-        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-        gray = cv2.GaussianBlur(gray, (3, 3), 0)
-
-        # OTSU picks a threshold automatically for the small crop.
-        _, binary = cv2.threshold(
-            gray,
-            0,
-            255,
-            cv2.THRESH_BINARY + cv2.THRESH_OTSU,
-        )
-
-        # Tesseract usually prefers dark text on a white background.
-        # If this crop is mostly dark, invert it.
-        if np.mean(binary) < 127:
-            binary = cv2.bitwise_not(binary)
-
-    # Enlarge the tiny text substantially before OCR.
     binary = cv2.resize(
         binary,
         None,
-        fx=4.0,
-        fy=4.0,
+        fx=5.0,
+        fy=5.0,
         interpolation=cv2.INTER_CUBIC,
     )
 
-    # Add a white border so characters close to the crop boundary
-    # are less likely to be clipped by Tesseract.
     binary = cv2.copyMakeBorder(
         binary,
-        20,
-        20,
-        20,
-        20,
+        24,
+        24,
+        24,
+        24,
         cv2.BORDER_CONSTANT,
         value=255,
     )
@@ -185,24 +166,182 @@ def prepare_temperature_text_crop(crop):
     return binary
 
 
-def ocr_temperature(frame, roi, decimal_places=1):
+def prepare_temperature_text_crop(crop, method="green_difference"):
+    """
+    Prepare a scale-label crop for Tesseract.
+
+    The thermal camera uses pale green/mint text over a dark
+    background. Different videos/compression levels can change the
+    exact pixel values, so the OCR configuration script tests several
+    methods and stores the best method in scale_config.json.
+
+    Supported methods:
+        green_difference
+        hsv_green
+        green_channel_otsu
+        gray_otsu
+        gray_adaptive
+    """
+    if crop is None or crop.size == 0:
+        return None
+
+    b, g, r = cv2.split(crop)
+
+    if method == "green_difference":
+        # Detect pixels where green is even slightly stronger than
+        # red/blue. The old threshold was too strict for pale mint
+        # anti-aliased text.
+        b16 = b.astype(np.int16)
+        g16 = g.astype(np.int16)
+        r16 = r.astype(np.int16)
+
+        green_advantage = g16 - np.maximum(r16, b16)
+
+        mask = (
+            (green_advantage >= 4)
+            & (g >= 70)
+        ).astype(np.uint8) * 255
+
+        # IMPORTANT:
+        # Morphology is done while the TEXT is white foreground.
+        # The previous script performed closing on black text over
+        # white background, which can erase thin character strokes.
+        kernel = np.ones((2, 2), dtype=np.uint8)
+
+        mask = cv2.morphologyEx(
+            mask,
+            cv2.MORPH_CLOSE,
+            kernel,
+            iterations=1,
+        )
+
+        mask = cv2.dilate(
+            mask,
+            kernel,
+            iterations=1,
+        )
+
+        return _finish_binary_for_tesseract(mask)
+
+    if method == "hsv_green":
+        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+
+        # Fairly broad range because the label is pale green rather
+        # than strongly saturated green.
+        lower = np.array([25, 12, 65], dtype=np.uint8)
+        upper = np.array([100, 255, 255], dtype=np.uint8)
+
+        mask = cv2.inRange(
+            hsv,
+            lower,
+            upper,
+        )
+
+        kernel = np.ones((2, 2), dtype=np.uint8)
+
+        mask = cv2.morphologyEx(
+            mask,
+            cv2.MORPH_CLOSE,
+            kernel,
+            iterations=1,
+        )
+
+        return _finish_binary_for_tesseract(mask)
+
+    if method == "green_channel_otsu":
+        # The green channel usually gives the best contrast for the
+        # mint labels even when saturation is low.
+        channel = cv2.GaussianBlur(
+            g,
+            (3, 3),
+            0,
+        )
+
+        _, binary = cv2.threshold(
+            channel,
+            0,
+            255,
+            cv2.THRESH_BINARY + cv2.THRESH_OTSU,
+        )
+
+        return _finish_binary_for_tesseract(binary)
+
+    gray = cv2.cvtColor(
+        crop,
+        cv2.COLOR_BGR2GRAY,
+    )
+
+    if method == "gray_otsu":
+        gray = cv2.GaussianBlur(
+            gray,
+            (3, 3),
+            0,
+        )
+
+        _, binary = cv2.threshold(
+            gray,
+            0,
+            255,
+            cv2.THRESH_BINARY + cv2.THRESH_OTSU,
+        )
+
+        return _finish_binary_for_tesseract(binary)
+
+    if method == "gray_adaptive":
+        gray = cv2.GaussianBlur(
+            gray,
+            (3, 3),
+            0,
+        )
+
+        binary = cv2.adaptiveThreshold(
+            gray,
+            255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY,
+            21,
+            5,
+        )
+
+        return _finish_binary_for_tesseract(binary)
+
+    raise ValueError(
+        f"Unknown OCR preprocessing method: {method}"
+    )
+
+
+def ocr_temperature(
+    frame,
+    roi,
+    decimal_places=1,
+    method="green_difference",
+    psm=7,
+    padding=6,
+):
     """
     OCR one temperature label from one frame.
 
     Returns:
-        value: float or np.nan
-        raw_text: original Tesseract output
-        prepared_crop: image used for OCR, useful for debugging
+        value
+        raw_text
+        prepared_crop
     """
-    crop = crop_roi(frame, roi)
-    prepared = prepare_temperature_text_crop(crop)
+    crop = crop_roi_with_padding(
+        frame,
+        roi,
+        padding=padding,
+    )
+
+    prepared = prepare_temperature_text_crop(
+        crop,
+        method=method,
+    )
 
     if prepared is None:
         return np.nan, "", None
 
-    # Restrict OCR to exactly the characters we expect.
     config = (
-        "--psm 7 "
+        f"--psm {int(psm)} "
         "-c tessedit_char_whitelist=0123456789.-"
     )
 
@@ -232,6 +371,7 @@ def scan_dynamic_scale(
     ocr_every=1,
     min_allowed=-100.0,
     max_allowed=1000.0,
+    min_scale_span=5.0,
     debug_invalid_limit=20,
 ):
     """
@@ -241,7 +381,7 @@ def scan_dynamic_scale(
 
     We do this as a separate pass because OCR can occasionally miss
     a frame. After scanning, missing values can be interpolated from
-    neighboring valid frames rather than letting one OCR failure
+    held valid readings rather than letting one OCR failure
     destroy the temperature calculation for that frame.
     """
     cap = cv2.VideoCapture(str(video_path))
@@ -275,6 +415,33 @@ def scan_dynamic_scale(
         scale_config["scale"].get("display_decimal_places", 1)
     )
 
+    # The configuration tool tests multiple OCR pipelines on the
+    # reference frame and stores the best choice for MIN and MAX.
+    min_ocr_method = scale_config["scale"].get(
+        "min_ocr_method",
+        "green_difference",
+    )
+    max_ocr_method = scale_config["scale"].get(
+        "max_ocr_method",
+        "green_difference",
+    )
+
+    min_ocr_psm = int(
+        scale_config["scale"].get("min_ocr_psm", 7)
+    )
+    max_ocr_psm = int(
+        scale_config["scale"].get("max_ocr_psm", 7)
+    )
+
+    ocr_padding = int(
+        scale_config["scale"].get("ocr_padding_pixels", 6)
+    )
+
+    print(
+        f"OCR methods: MIN={min_ocr_method}/PSM{min_ocr_psm}, "
+        f"MAX={max_ocr_method}/PSM{max_ocr_psm}"
+    )
+
     invalid_debug_dir = output_dir / "ocr_debug_invalid"
     invalid_debug_dir.mkdir(parents=True, exist_ok=True)
     invalid_saved = 0
@@ -306,12 +473,18 @@ def scan_dynamic_scale(
                 frame,
                 min_roi,
                 decimal_places=decimal_places,
+                method=min_ocr_method,
+                psm=min_ocr_psm,
+                padding=ocr_padding,
             )
 
             max_value, max_text, max_prepared = ocr_temperature(
                 frame,
                 max_roi,
                 decimal_places=decimal_places,
+                method=max_ocr_method,
+                psm=max_ocr_psm,
+                padding=ocr_padding,
             )
 
             raw_min_text[local_idx] = min_text
@@ -324,6 +497,7 @@ def scan_dynamic_scale(
                 and min_allowed <= min_value <= max_allowed
                 and min_allowed <= max_value <= max_allowed
                 and max_value > min_value
+                and (max_value - min_value) >= float(min_scale_span)
             )
 
             if pair_valid:
@@ -368,34 +542,52 @@ def scan_dynamic_scale(
     # --------------------------------------------------------
     # Interpolate missing readings.
     # --------------------------------------------------------
-    def interpolate_nan(values):
-        values = values.astype(np.float64).copy()
-        x = np.arange(len(values))
-        valid = np.isfinite(values)
+    def fill_missing_scale_values(values):
+        """
+        Fill missing OCR readings using a held-value strategy.
 
-        if np.count_nonzero(valid) == 0:
+        The camera's displayed scale changes in discrete steps. Linear
+        interpolation can invent scale values that were never displayed.
+        We therefore:
+          1. back-fill any gap before the first valid OCR result,
+          2. forward-fill later missing frames with the most recently
+             observed valid value.
+
+        When OCR is sampled a few times per second this preserves the
+        piecewise-constant behavior of the on-screen scale much better.
+        """
+        values = values.astype(np.float64).copy()
+        valid_indices = np.flatnonzero(
+            np.isfinite(values)
+        )
+
+        if len(valid_indices) == 0:
             raise RuntimeError(
                 "OCR could not read ANY valid scale values. "
-                "Check the MAX/MIN text ROIs and OCR debug crops."
+                "The script refused to guess. "
+                "Re-run configure_thermal_scale_v2.py and inspect "
+                "the saved OCR diagnostic crops."
             )
 
-        if np.count_nonzero(valid) == 1:
-            # Only one valid reading exists. Use it everywhere so the
-            # script can continue, but this should be treated as a
-            # diagnostic warning rather than a trustworthy final run.
-            values[:] = values[valid][0]
-            return values
+        first = int(valid_indices[0])
 
-        values[~valid] = np.interp(
-            x[~valid],
-            x[valid],
-            values[valid],
-        )
+        # Frames before the first sampled success use the first valid
+        # observed scale value.
+        values[:first] = values[first]
+
+        last_value = values[first]
+
+        for idx in range(first, len(values)):
+            if np.isfinite(values[idx]):
+                last_value = values[idx]
+            else:
+                values[idx] = last_value
 
         return values
 
-    clean_min = interpolate_nan(raw_min)
-    clean_max = interpolate_nan(raw_max)
+
+    clean_min = fill_missing_scale_values(raw_min)
+    clean_max = fill_missing_scale_values(raw_max)
 
     # Final sanity check after interpolation.
     bad_order = clean_max <= clean_min
@@ -1072,10 +1264,21 @@ def main():
     parser.add_argument(
         "--ocr-every",
         type=int,
-        default=1,
+        default=None,
         help=(
-            "Run OCR every N frames. Default 1 = every frame. "
-            "Skipped frames are linearly interpolated."
+            "Advanced override: OCR every N frames. "
+            "If omitted, --ocr-hz is used instead."
+        ),
+    )
+
+    parser.add_argument(
+        "--ocr-hz",
+        type=float,
+        default=3.0,
+        help=(
+            "How many times per second to read the changing scale "
+            "with OCR. Default: 3.0. The output video is STILL "
+            "written at the original FPS; this controls only OCR."
         ),
     )
 
@@ -1138,6 +1341,17 @@ def main():
     )
 
     parser.add_argument(
+        "--min-scale-span",
+        type=float,
+        default=5.0,
+        help=(
+            "Reject OCR MIN/MAX pairs whose difference is smaller "
+            "than this many degrees C. Default 5.0. This prevents "
+            "bad pairs such as 0.1 C to 0.8 C from being accepted."
+        ),
+    )
+
+    parser.add_argument(
         "--no-video",
         action="store_true",
         help=(
@@ -1170,6 +1384,7 @@ def main():
         raise RuntimeError(f"Could not open video: {video_path}")
 
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = float(cap.get(cv2.CAP_PROP_FPS))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     cap.release()
@@ -1208,6 +1423,71 @@ def main():
         )
 
     # --------------------------------------------------------
+    # Decide OCR cadence.
+    #
+    # IMPORTANT:
+    # OCR frequency and output-video FPS are separate things.
+    #
+    # Example at 25 FPS:
+    #   --ocr-hz 3
+    #       -> OCR approximately every 8 frames
+    #       -> temperature/polygon calculations still happen
+    #          on ALL 25 frames each second
+    #       -> output video remains 25 FPS and full duration
+    # --------------------------------------------------------
+
+    if args.ocr_every is not None:
+        ocr_every = max(
+            1,
+            int(args.ocr_every),
+        )
+    else:
+        if fps <= 0:
+            raise RuntimeError(
+                "Video reported invalid FPS, so --ocr-hz "
+                "cannot be converted to a frame interval."
+            )
+
+        if float(args.ocr_hz) <= 0:
+            raise ValueError(
+                "--ocr-hz must be greater than 0."
+            )
+
+        ocr_every = max(
+            1,
+            int(round(fps / float(args.ocr_hz))),
+        )
+
+    effective_ocr_hz = (
+        fps / ocr_every
+        if fps > 0
+        else 0.0
+    )
+
+    print(
+        f"\nVideo FPS: {fps:.3f}"
+        f"\nOCR interval: every {ocr_every} frame(s)"
+        f"\nEffective OCR rate: {effective_ocr_hz:.3f} reads/second"
+    )
+
+    if args.max_frames is not None:
+        test_frames = end_frame - start_frame + 1
+
+        test_duration = (
+            test_frames / fps
+            if fps > 0
+            else 0.0
+        )
+
+        print(
+            "\nTEST MODE IS ACTIVE because --max-frames was supplied."
+            f"\nOnly {test_frames} frames will be written."
+            f"\nExpected output duration: approximately "
+            f"{test_duration:.2f} seconds."
+            "\nRemove --max-frames for a full-length output video."
+        )
+
+    # --------------------------------------------------------
     # PASS 1: dynamic scale OCR.
     # --------------------------------------------------------
     scale_scan = scan_dynamic_scale(
@@ -1216,9 +1496,10 @@ def main():
         output_dir=output_dir,
         start_frame=start_frame,
         end_frame=end_frame,
-        ocr_every=max(1, int(args.ocr_every)),
+        ocr_every=ocr_every,
         min_allowed=float(args.min_allowed_temp),
         max_allowed=float(args.max_allowed_temp),
+        min_scale_span=float(args.min_scale_span),
     )
 
     # --------------------------------------------------------
