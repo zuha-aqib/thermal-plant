@@ -8,6 +8,61 @@ import cv2
 import numpy as np
 import pytesseract
 
+# Default Stage-2 output root.
+DEFAULT_OUTPUT_ROOT = "step02-ocr-scale-config"
+
+
+# ============================================================
+# OUTPUT PATH HELPERS
+# ============================================================
+
+def find_raw_videos_ancestor(video_path):
+    """
+    Find the nearest parent directory literally named 'raw-videos'.
+
+    This lets every stage preserve nested folders from raw-videos.
+
+    Example:
+        raw-videos/
+            Furnace/
+                Camera-01/
+                    sample.mp4
+
+    becomes:
+        <step-output-root>/
+            Furnace/
+                Camera-01/
+                    sample/
+    """
+    video_path = Path(video_path).resolve()
+
+    for parent in video_path.parents:
+        if parent.name.lower() == "raw-videos":
+            return parent
+
+    return None
+
+
+def build_video_output_dir(video_path, output_root):
+    """
+    Build the final per-video output folder.
+
+    If the video is under raw-videos/, preserve all nested folders
+    below raw-videos/. Otherwise use only the video's stem.
+    """
+    video_path = Path(video_path).resolve()
+    output_root = Path(output_root).resolve()
+
+    raw_root = find_raw_videos_ancestor(video_path)
+
+    if raw_root is not None:
+        relative_video = video_path.relative_to(raw_root)
+        relative_parent = relative_video.parent
+    else:
+        relative_parent = Path()
+
+    return output_root / relative_parent / video_path.stem
+
 
 # ============================================================
 # OCR METHODS TESTED DURING CONFIGURATION
@@ -1017,10 +1072,10 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--output",
-        default="thermal_scale_config",
+        default=DEFAULT_OUTPUT_ROOT,
         help=(
-            "Folder for scale configuration "
-            "and OCR diagnostics"
+            "Stage-2 output ROOT folder. A per-video folder is "
+            "created automatically inside it."
         ),
     )
 
@@ -1085,10 +1140,27 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    video_path = Path(args.video)
+
+    # Keep the output hierarchy aligned with raw-videos.
+    #
+    # Example:
+    #   raw-videos/Furnace/video.mp4
+    #       ->
+    #   step02-ocr-scale-config/Furnace/video/
+    output_dir = build_video_output_dir(
+        video_path=video_path,
+        output_root=args.output,
+    )
+
+    print(
+        f"\nStage-2 output folder:\n{output_dir}"
+    )
+
     configure(
-        video_path=args.video,
+        video_path=video_path,
         regions_json_path=args.regions_json,
-        output_dir=args.output,
+        output_dir=output_dir,
         frame_override=args.frame,
         tesseract_path=args.tesseract,
         min_allowed=args.min_allowed_temp,

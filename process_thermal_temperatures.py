@@ -10,6 +10,61 @@ import cv2
 import numpy as np
 import pytesseract
 
+# Default Stage-3 output root.
+DEFAULT_OUTPUT_ROOT = "step03-roi-videos"
+
+
+# ============================================================
+# OUTPUT PATH HELPERS
+# ============================================================
+
+def find_raw_videos_ancestor(video_path):
+    """
+    Find the nearest parent directory literally named 'raw-videos'.
+
+    This lets every stage preserve nested folders from raw-videos.
+
+    Example:
+        raw-videos/
+            Furnace/
+                Camera-01/
+                    sample.mp4
+
+    becomes:
+        <step-output-root>/
+            Furnace/
+                Camera-01/
+                    sample/
+    """
+    video_path = Path(video_path).resolve()
+
+    for parent in video_path.parents:
+        if parent.name.lower() == "raw-videos":
+            return parent
+
+    return None
+
+
+def build_video_output_dir(video_path, output_root):
+    """
+    Build the final per-video output folder.
+
+    If the video is under raw-videos/, preserve all nested folders
+    below raw-videos/. Otherwise use only the video's stem.
+    """
+    video_path = Path(video_path).resolve()
+    output_root = Path(output_root).resolve()
+
+    raw_root = find_raw_videos_ancestor(video_path)
+
+    if raw_root is not None:
+        relative_video = video_path.relative_to(raw_root)
+        relative_parent = relative_video.parent
+    else:
+        relative_parent = Path()
+
+    return output_root / relative_parent / video_path.stem
+
 
 # ============================================================
 # VISUAL SETTINGS
@@ -2111,8 +2166,11 @@ def main():
 
     parser.add_argument(
         "--output",
-        default="thermal_temperature_output",
-        help="Output folder",
+        default=DEFAULT_OUTPUT_ROOT,
+        help=(
+            "Stage-3 output ROOT folder. A per-video folder is "
+            "created automatically inside it."
+        ),
     )
 
     parser.add_argument(
@@ -2240,8 +2298,26 @@ def main():
     video_path = Path(args.video)
     regions_json_path = Path(args.regions_json)
     scale_config_json_path = Path(args.scale_config_json)
-    output_dir = Path(args.output)
-    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Keep the output hierarchy aligned with raw-videos.
+    #
+    # Example:
+    #   raw-videos/Furnace/video.mp4
+    #       ->
+    #   step03-roi-videos/Furnace/video/
+    output_dir = build_video_output_dir(
+        video_path=video_path,
+        output_root=args.output,
+    )
+
+    output_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    print(
+        f"\nStage-3 output folder:\n{output_dir}"
+    )
 
     # If Tesseract is installed but not on PATH, the user can pass
     # --tesseract with the executable location.
