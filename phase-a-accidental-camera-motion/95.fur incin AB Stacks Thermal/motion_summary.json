@@ -1,0 +1,18 @@
+{
+    "total_frames": 7420,
+    "reference_frame_number": 0,
+    "status_counts": {
+        "REFERENCE": 1,
+        "TRACKED": 7419
+    },
+    "method_counts": {
+        "REFERENCE": 1,
+        "LK_OPTICAL_FLOW": 7419
+    },
+    "maximum_absolute_dx_pixels": 23.49916569465313,
+    "maximum_absolute_dy_pixels": 12.025879185994597,
+    "maximum_translation_pixels": 26.397498203441483,
+    "maximum_absolute_rotation_deg": 0.9901662818165867,
+    "minimum_scale": 0.9966387492912097,
+    "maximum_scale": 1.0001856199204322
+}
