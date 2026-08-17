@@ -2,7 +2,9 @@ import cv2
 import json
 import pickle
 import argparse
+import shutil
 from pathlib import Path
+
 import numpy as np
 
 
@@ -30,23 +32,49 @@ MAX_DISPLAY_HEIGHT = 850
 # Thickness of annotation lines.
 LINE_THICKNESS = 2
 
+# Default output root requested for this project.
+#
+# Example:
+#
+#   raw-videos/
+#       95.fur incin AB Stacks Thermal.mp4
+#
+# becomes:
+#
+#   annotated-videos/
+#       95.fur incin AB Stacks Thermal/
+#           regions.json
+#           regions.pkl
+#           reference_frame.png
+#           annotated_reference_frame.png
+#           annotated_video.mp4
+#
+DEFAULT_OUTPUT_ROOT = "annotated-videos"
+
+# A video is considered "already parsed" only when BOTH
+# coordinate files and the final annotated video are present
+# and non-empty.
+REQUIRED_COMPLETION_FILES = (
+    "regions.json",
+    "regions.pkl",
+    "annotated_video.mp4",
+)
+
 
 # ============================================================
 # GLOBAL ANNOTATION STATE
 # ============================================================
 
-# These variables are changed while the user interacts with
-# the annotation window.
-
+# These are reset before EVERY video. This is important for
+# batch processing, otherwise annotations from one video could
+# accidentally carry over to the next video.
 current_points = []
 regions = []
 
 # Default drawing mode.
-# Can be changed between "polygon" and "rectangle".
 drawing_mode = "polygon"
 
-# Information needed to convert displayed coordinates back
-# into coordinates from the original full-resolution frame.
+# Used to map resized GUI coordinates back to original pixels.
 display_scale = 1.0
 
 # Original frame used for annotation.
@@ -54,77 +82,318 @@ original_frame = None
 
 
 # ============================================================
-# HELPER: RESIZE FRAME FOR DISPLAY
+# BASIC PATH / BATCH HELPERS
+# ============================================================
+
+def is_mp4_file(path):
+    """Return True for .mp4 files, case-insensitively."""
+    return path.is_file() and path.suffix.lower() == ".mp4"
+
+
+def discover_mp4_videos(input_path):
+    """
+    Accept either:
+      1. a single MP4 file, or
+      2. a directory containing MP4 files at any nesting depth.
+
+    Directory searches are recursive, so this works:
+
+        raw-videos/
+            plant-a/
+                camera-1/
+                    video1.mp4
+            plant-b/
+                video2.mp4
+    """
+
+    input_path = Path(input_path)
+
+    if input_path.is_file():
+        if not is_mp4_file(input_path):
+            raise ValueError(
+                f"Input file is not an MP4 video: {input_path}"
+            )
+
+        return [input_path]
+
+    if input_path.is_dir():
+        videos = [
+            path
+            for path in input_path.rglob("*")
+            if is_mp4_file(path)
+        ]
+
+        # Stable alphabetical order makes batch runs predictable.
+        videos.sort(key=lambda p: str(p).lower())
+
+        return videos
+
+    raise FileNotFoundError(
+        f"Input path does not exist: {input_path}"
+    )
+
+
+def find_raw_videos_ancestor(video_path):
+    """
+    When a single video is passed directly, try to find a parent
+    directory literally named 'raw-videos'.
+
+    This lets us preserve nested source folders even when the
+    command points to one individual file.
+
+    Example:
+
+        raw-videos/Area-A/Camera-01/video.mp4
+
+    becomes:
+
+        annotated-videos/Area-A/Camera-01/video/
+    """
+
+    for parent in video_path.parents:
+        if parent.name.lower() == "raw-videos":
+            return parent
+
+    return None
+
+
+def build_output_dir(video_path, input_path, output_root):
+    """
+    Build the final output directory for one video.
+
+    Rules
+    -----
+    Folder input:
+        Preserve every folder underneath the folder that the user passed.
+
+        raw-videos/Area-A/Camera-01/video.mp4
+            ->
+        annotated-videos/Area-A/Camera-01/video/
+
+    Single-file input:
+        If the video is somewhere under a folder named raw-videos,
+        preserve the folders below raw-videos.
+
+        Otherwise:
+            annotated-videos/video/
+    """
+
+    video_path = Path(video_path).resolve()
+    input_path = Path(input_path).resolve()
+    output_root = Path(output_root).resolve()
+
+    if input_path.is_dir():
+        relative_video = video_path.relative_to(input_path)
+        relative_parent = relative_video.parent
+
+    else:
+        raw_root = find_raw_videos_ancestor(video_path)
+
+        if raw_root is not None:
+            relative_video = video_path.relative_to(raw_root)
+            relative_parent = relative_video.parent
+        else:
+            relative_parent = Path()
+
+    return output_root / relative_parent / video_path.stem
+
+
+def file_exists_and_nonempty(path):
+    """Return True only if a regular file exists and has data."""
+    path = Path(path)
+
+    return (
+        path.is_file()
+        and path.stat().st_size > 0
+    )
+
+
+def is_annotation_complete(output_dir):
+    """
+    A video counts as already parsed only when it has:
+      - regions.json
+      - regions.pkl
+      - annotated_video.mp4
+
+    All three must exist and must be non-empty.
+    """
+
+    output_dir = Path(output_dir)
+
+    if not output_dir.is_dir():
+        return False
+
+    return all(
+        file_exists_and_nonempty(output_dir / filename)
+        for filename in REQUIRED_COMPLETION_FILES
+    )
+
+
+def has_any_output(output_dir):
+    """
+    Detect whether an output folder exists and contains anything.
+
+    This lets us distinguish:
+      - no previous work
+      - partial/incomplete work
+      - completed work
+    """
+
+    output_dir = Path(output_dir)
+
+    if not output_dir.is_dir():
+        return False
+
+    try:
+        next(output_dir.iterdir())
+        return True
+    except StopIteration:
+        return False
+
+
+def prompt_yes_no(message, default=True):
+    """
+    Reusable Y/N prompt.
+
+    default=True  -> [Y/n]
+    default=False -> [y/N]
+    """
+
+    suffix = " [Y/n]: " if default else " [y/N]: "
+
+    while True:
+        answer = input(message + suffix).strip().lower()
+
+        if not answer:
+            return default
+
+        if answer in ("y", "yes"):
+            return True
+
+        if answer in ("n", "no"):
+            return False
+
+        print("Please enter Y or N.")
+
+
+def safe_remove_directory(path):
+    """Delete a directory tree if it exists."""
+    path = Path(path)
+
+    if path.exists():
+        shutil.rmtree(path)
+
+
+def finalize_completed_output(working_dir, final_dir):
+    """
+    Promote a fully completed temporary result into the final
+    per-video output directory.
+
+    WHY USE A TEMPORARY FOLDER?
+    ---------------------------
+    Suppose a video was already completed and the user chooses
+    to redo it. If we immediately overwrite regions.json and the
+    script gets interrupted while generating annotated_video.mp4,
+    we could end up with NEW coordinates + OLD video.
+
+    Instead we build everything inside:
+
+        video_name.__processing__/
+
+    Only after the new annotated video finishes successfully do
+    we replace:
+
+        video_name/
+
+    This also means stopping a long batch run does NOT damage
+    previously completed videos.
+    """
+
+    working_dir = Path(working_dir)
+    final_dir = Path(final_dir)
+
+    final_dir.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    # Keep a short-lived backup only during the final swap.
+    backup_dir = final_dir.with_name(
+        final_dir.name + ".__backup__"
+    )
+
+    safe_remove_directory(backup_dir)
+
+    # If an old final result exists, move it out of the way.
+    if final_dir.exists():
+        final_dir.rename(backup_dir)
+
+    try:
+        # working_dir and final_dir are siblings, so this rename
+        # stays on the same drive and is normally very fast.
+        working_dir.rename(final_dir)
+
+    except Exception:
+        # If promotion fails, restore the old completed result.
+        if backup_dir.exists() and not final_dir.exists():
+            backup_dir.rename(final_dir)
+
+        raise
+
+    else:
+        # New result is safely in place. Old backup can go.
+        safe_remove_directory(backup_dir)
+
+
+# ============================================================
+# DISPLAY / COORDINATE HELPERS
 # ============================================================
 
 def calculate_display_scale(width, height):
     """
     Calculate how much the original frame needs to be scaled
-    so that it fits comfortably on the user's screen.
+    so that it fits comfortably on the screen.
 
-    IMPORTANT:
-    This only changes how large the frame looks in the GUI.
-    Annotation coordinates are still saved relative to the
-    ORIGINAL video resolution.
+    This ONLY affects display size. Saved coordinates stay in
+    original video pixel coordinates.
     """
 
     width_scale = MAX_DISPLAY_WIDTH / width
     height_scale = MAX_DISPLAY_HEIGHT / height
 
-    # Never enlarge the frame beyond its original resolution.
+    # Never enlarge beyond original resolution.
     return min(width_scale, height_scale, 1.0)
-
-
-def original_to_display(point):
-    """
-    Convert an original-video coordinate to the resized
-    coordinate used by the annotation window.
-    """
-
-    x, y = point
-
-    display_x = int(x * display_scale)
-    display_y = int(y * display_scale)
-
-    return display_x, display_y
 
 
 def display_to_original(x, y):
     """
-    Convert a mouse click from the resized display frame
-    back into the ORIGINAL video coordinate system.
+    Convert a mouse click on the resized preview back into the
+    original full-resolution video coordinate system.
     """
 
     original_x = int(round(x / display_scale))
     original_y = int(round(y / display_scale))
 
-    # Clamp coordinates so they always remain inside the image.
-    original_x = max(0, min(original_x, original_frame.shape[1] - 1))
-    original_y = max(0, min(original_y, original_frame.shape[0] - 1))
+    original_x = max(
+        0,
+        min(original_x, original_frame.shape[1] - 1)
+    )
+
+    original_y = max(
+        0,
+        min(original_y, original_frame.shape[0] - 1)
+    )
 
     return original_x, original_y
 
 
-# ============================================================
-# HELPER: RECTANGLE -> FOUR POLYGON POINTS
-# ============================================================
-
 def rectangle_points(point1, point2):
     """
     Convert two opposite rectangle corners into four polygon
-    coordinates.
+    points.
 
-    Example:
-
-        point1 -------- point2
-          |                |
-          |                |
-          |                |
-        point4 -------- point3
-
-    Saving rectangles as four points makes the later thermal
-    processing code simpler because rectangles and polygons
-    can both be converted into masks using the same method.
+    Saving both rectangles and polygons as a list of final
+    vertices makes later mask generation simpler.
     """
 
     x1, y1 = point1
@@ -132,7 +401,6 @@ def rectangle_points(point1, point2):
 
     left = min(x1, x2)
     right = max(x1, x2)
-
     top = min(y1, y2)
     bottom = max(y1, y2)
 
@@ -140,42 +408,39 @@ def rectangle_points(point1, point2):
         [left, top],
         [right, top],
         [right, bottom],
-        [left, bottom]
+        [left, bottom],
     ]
 
 
 # ============================================================
-# DRAW ALL ANNOTATIONS
+# DRAW ANNOTATION PREVIEW
 # ============================================================
 
 def draw_annotation_preview():
     """
-    Build the image shown to the user.
+    Build the current GUI preview.
 
     Confirmed regions:
         RED
 
-    Current unconfirmed points:
+    Current unfinished points:
         YELLOW
 
-    Nothing is permanently painted onto the original frame.
+    The underlying original_frame is never modified.
     """
 
-    # Work on a COPY so our source image remains untouched.
     frame = original_frame.copy()
 
     # --------------------------------------------------------
-    # Draw already-confirmed regions
+    # Draw confirmed ROIs
     # --------------------------------------------------------
 
     for region in regions:
-
         points = np.array(
             region["pixel_points"],
             dtype=np.int32
         )
 
-        # Draw red polygon.
         cv2.polylines(
             frame,
             [points],
@@ -184,20 +449,13 @@ def draw_annotation_preview():
             thickness=LINE_THICKNESS
         )
 
-        # Use the upper-left-most point approximately as the
-        # location for the region name.
         min_x = int(np.min(points[:, 0]))
         min_y = int(np.min(points[:, 1]))
-
-        text_position = (
-            min_x,
-            max(25, min_y - 8)
-        )
 
         cv2.putText(
             frame,
             region["name"],
-            text_position,
+            (min_x, max(25, min_y - 8)),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.7,
             RED,
@@ -206,14 +464,11 @@ def draw_annotation_preview():
         )
 
     # --------------------------------------------------------
-    # Draw points currently being selected
+    # Draw current unfinished annotation
     # --------------------------------------------------------
 
-    if len(current_points) > 0:
-
-        # Draw each clicked point.
+    if current_points:
         for point in current_points:
-
             cv2.circle(
                 frame,
                 tuple(point),
@@ -222,11 +477,8 @@ def draw_annotation_preview():
                 thickness=-1
             )
 
-        # POLYGON MODE
         if drawing_mode == "polygon":
-
             if len(current_points) >= 2:
-
                 points = np.array(
                     current_points,
                     dtype=np.int32
@@ -240,11 +492,8 @@ def draw_annotation_preview():
                     thickness=LINE_THICKNESS
                 )
 
-        # RECTANGLE MODE
         elif drawing_mode == "rectangle":
-
             if len(current_points) == 2:
-
                 cv2.rectangle(
                     frame,
                     tuple(current_points[0]),
@@ -254,7 +503,7 @@ def draw_annotation_preview():
                 )
 
     # --------------------------------------------------------
-    # Add instructions at the top
+    # Help bar
     # --------------------------------------------------------
 
     instructions = (
@@ -263,10 +512,10 @@ def draw_annotation_preview():
         "ENTER: confirm | "
         "BACKSPACE: undo point | "
         "P: polygon | R: rectangle | "
-        "U: undo region | S: save | Q: quit"
+        "U: undo region | C: clear | "
+        "S: save | Q: skip video"
     )
 
-    # Black background behind instructions for readability.
     cv2.rectangle(
         frame,
         (0, 0),
@@ -286,12 +535,8 @@ def draw_annotation_preview():
         cv2.LINE_AA
     )
 
-    # --------------------------------------------------------
-    # Resize only for display
-    # --------------------------------------------------------
-
+    # Resize only for the GUI.
     if display_scale != 1.0:
-
         frame = cv2.resize(
             frame,
             None,
@@ -308,37 +553,19 @@ def draw_annotation_preview():
 # ============================================================
 
 def mouse_callback(event, x, y, flags, param):
-    """
-    Handle mouse clicks inside the OpenCV annotation window.
-    """
+    """Handle left-click annotation points."""
 
     global current_points
 
     if event != cv2.EVENT_LBUTTONDOWN:
         return
 
-    # Convert click from displayed image coordinates back into
-    # coordinates from the original video frame.
     point = display_to_original(x, y)
 
-    # --------------------------------------------------------
-    # POLYGON MODE
-    # --------------------------------------------------------
-
     if drawing_mode == "polygon":
-
-        # Every click adds another polygon vertex.
         current_points.append(point)
 
-    # --------------------------------------------------------
-    # RECTANGLE MODE
-    # --------------------------------------------------------
-
     elif drawing_mode == "rectangle":
-
-        # A rectangle only needs two points:
-        # one corner and the opposite corner.
-
         if len(current_points) < 2:
             current_points.append(point)
 
@@ -350,28 +577,17 @@ def mouse_callback(event, x, y, flags, param):
 
 
 # ============================================================
-# CONFIRM CURRENT REGION
+# CONFIRM CURRENT ROI
 # ============================================================
 
 def confirm_current_region():
-    """
-    Turn the current temporary annotation into a permanent ROI.
-    """
+    """Convert the current temporary shape into a confirmed ROI."""
 
     global current_points
 
-    # --------------------------------------------------------
-    # Validate annotation
-    # --------------------------------------------------------
-
     if drawing_mode == "polygon":
-
         if len(current_points) < 3:
-
-            print(
-                "\nA polygon needs at least 3 points."
-            )
-
+            print("\nA polygon needs at least 3 points.")
             return
 
         final_points = [
@@ -380,13 +596,10 @@ def confirm_current_region():
         ]
 
     elif drawing_mode == "rectangle":
-
         if len(current_points) != 2:
-
             print(
                 "\nA rectangle needs exactly 2 opposite corners."
             )
-
             return
 
         final_points = rectangle_points(
@@ -397,13 +610,10 @@ def confirm_current_region():
     else:
         return
 
-    # --------------------------------------------------------
-    # Ask user for ROI / equipment name
-    # --------------------------------------------------------
-
     suggested_name = f"ROI_{len(regions) + 1:02d}"
 
     print()
+
     name = input(
         f"Enter region/equipment name "
         f"[default: {suggested_name}]: "
@@ -414,60 +624,29 @@ def confirm_current_region():
 
     height, width = original_frame.shape[:2]
 
-    # --------------------------------------------------------
-    # Calculate normalized points
-    # --------------------------------------------------------
-    #
-    # Example:
-    #
-    # Pixel coordinate:
-    #     [640, 360]
-    #
-    # For a 1280x720 frame:
-    #
-    # Normalized:
-    #     [0.5, 0.5]
-    #
-    # This is useful if the video later gets resized.
-    # --------------------------------------------------------
-
-    normalized_points = []
-
-    for x, y in final_points:
-
-        normalized_points.append([
-            x / width,
-            y / height
-        ])
-
-    # --------------------------------------------------------
-    # Save region
-    # --------------------------------------------------------
+    normalized_points = [
+        [x / width, y / height]
+        for x, y in final_points
+    ]
 
     region = {
         "id": len(regions) + 1,
         "name": name,
         "shape_type": drawing_mode,
         "pixel_points": final_points,
-        "normalized_points": normalized_points
+        "normalized_points": normalized_points,
     }
 
     regions.append(region)
 
-    print(
-        f"Confirmed region: {name}"
-    )
+    print(f"Confirmed region: {name}")
+    print(f"Pixel coordinates: {final_points}")
 
-    print(
-        f"Pixel coordinates: {final_points}"
-    )
-
-    # Clear temporary points so next ROI can be created.
     current_points = []
 
 
 # ============================================================
-# SAVE JSON + PKL + IMAGES
+# SAVE JSON + PKL + REFERENCE IMAGES
 # ============================================================
 
 def save_annotations(
@@ -478,12 +657,16 @@ def save_annotations(
     total_frames
 ):
     """
-    Save annotation information to both JSON and PKL.
+    Save:
+      - regions.json
+      - regions.pkl
+      - reference_frame.png
+      - annotated_reference_frame.png
 
-    Also save:
-        - clean reference frame
-        - annotated reference frame
+    The full annotated video is produced separately afterwards.
     """
+
+    output_dir = Path(output_dir)
 
     output_dir.mkdir(
         parents=True,
@@ -492,40 +675,27 @@ def save_annotations(
 
     height, width = original_frame.shape[:2]
 
-    # --------------------------------------------------------
-    # Master annotation structure
-    # --------------------------------------------------------
-
     annotation_data = {
-
         "video": {
             "filename": Path(video_path).name,
-
+            "source_path": str(Path(video_path).resolve()),
             "width": width,
             "height": height,
-
             "fps": float(fps),
-
             "total_frames": int(total_frames),
-
             "reference_frame_number": int(
                 reference_frame_number
             ),
-
             "reference_time_seconds": (
                 float(reference_frame_number / fps)
                 if fps > 0
                 else None
-            )
+            ),
         },
-
-        "regions": regions
+        "regions": regions,
     }
 
-    # --------------------------------------------------------
-    # Save JSON
-    # --------------------------------------------------------
-
+    # Save JSON.
     json_path = output_dir / "regions.json"
 
     with open(
@@ -533,36 +703,27 @@ def save_annotations(
         "w",
         encoding="utf-8"
     ) as file:
-
         json.dump(
             annotation_data,
             file,
             indent=4
         )
 
-    # --------------------------------------------------------
-    # Save PKL
-    # --------------------------------------------------------
-
+    # Save PKL.
     pkl_path = output_dir / "regions.pkl"
 
     with open(
         pkl_path,
         "wb"
     ) as file:
-
         pickle.dump(
             annotation_data,
             file
         )
 
-    # --------------------------------------------------------
-    # Save clean reference frame
-    # --------------------------------------------------------
-
+    # Save untouched reference frame.
     reference_path = (
-        output_dir /
-        "reference_frame.png"
+        output_dir / "reference_frame.png"
     )
 
     cv2.imwrite(
@@ -570,14 +731,10 @@ def save_annotations(
         original_frame
     )
 
-    # --------------------------------------------------------
-    # Save FINAL annotated reference frame
-    # --------------------------------------------------------
-
+    # Save annotated reference image.
     annotated = original_frame.copy()
 
     for region in regions:
-
         points = np.array(
             region["pixel_points"],
             dtype=np.int32
@@ -597,10 +754,7 @@ def save_annotations(
         cv2.putText(
             annotated,
             region["name"],
-            (
-                min_x,
-                max(25, min_y - 8)
-            ),
+            (min_x, max(25, min_y - 8)),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.7,
             RED,
@@ -609,8 +763,7 @@ def save_annotations(
         )
 
     annotated_path = (
-        output_dir /
-        "annotated_reference_frame.png"
+        output_dir / "annotated_reference_frame.png"
     )
 
     cv2.imwrite(
@@ -618,31 +771,27 @@ def save_annotations(
         annotated
     )
 
-    print("\nAnnotations saved successfully.")
+    print("\nAnnotation coordinates saved.")
     print(f"JSON : {json_path}")
     print(f"PKL  : {pkl_path}")
     print(f"Frame: {reference_path}")
     print(f"Image: {annotated_path}")
 
-    return annotation_data
-
 
 # ============================================================
-# DRAW REGIONS ON ENTIRE VIDEO
+# APPLY ROIs TO THE FULL VIDEO
 # ============================================================
 
 def create_annotated_video(
     video_path,
     output_path,
-    regions
+    regions_to_draw
 ):
     """
-    Apply the SAME fixed regions to every frame of the video.
+    Draw the same fixed ROIs on every frame and save a complete
+    annotated MP4.
 
-    This does NOT calculate temperatures yet.
-
-    It simply proves that our saved annotations are correctly
-    aligned throughout the entire fixed-camera video.
+    Temperature extraction is NOT done here.
     """
 
     capture = cv2.VideoCapture(
@@ -650,34 +799,30 @@ def create_annotated_video(
     )
 
     if not capture.isOpened():
-
         raise RuntimeError(
             f"Could not open video: {video_path}"
         )
 
-    fps = capture.get(
-        cv2.CAP_PROP_FPS
-    )
+    fps = capture.get(cv2.CAP_PROP_FPS)
 
     width = int(
-        capture.get(
-            cv2.CAP_PROP_FRAME_WIDTH
-        )
+        capture.get(cv2.CAP_PROP_FRAME_WIDTH)
     )
 
     height = int(
-        capture.get(
-            cv2.CAP_PROP_FRAME_HEIGHT
-        )
+        capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
     )
 
     total_frames = int(
-        capture.get(
-            cv2.CAP_PROP_FRAME_COUNT
-        )
+        capture.get(cv2.CAP_PROP_FRAME_COUNT)
     )
 
-    # MP4 output codec.
+    if fps <= 0:
+        capture.release()
+        raise RuntimeError(
+            f"Video reported invalid FPS ({fps}): {video_path}"
+        )
+
     fourcc = cv2.VideoWriter_fourcc(
         *"mp4v"
     )
@@ -690,7 +835,6 @@ def create_annotated_video(
     )
 
     if not writer.isOpened():
-
         capture.release()
 
         raise RuntimeError(
@@ -699,143 +843,139 @@ def create_annotated_video(
 
     frame_number = 0
 
-    print(
-        "\nApplying annotations to entire video..."
-    )
+    print("\nApplying annotations to entire video...")
 
-    while True:
+    try:
+        while True:
+            success, frame = capture.read()
 
-        success, frame = capture.read()
+            if not success:
+                break
 
-        if not success:
-            break
+            for region in regions_to_draw:
+                points = np.array(
+                    region["pixel_points"],
+                    dtype=np.int32
+                )
 
-        # ----------------------------------------------------
-        # Draw every saved region
-        # ----------------------------------------------------
+                cv2.polylines(
+                    frame,
+                    [points],
+                    isClosed=True,
+                    color=RED,
+                    thickness=LINE_THICKNESS
+                )
 
-        for region in regions:
+                min_x = int(
+                    np.min(points[:, 0])
+                )
 
-            points = np.array(
-                region["pixel_points"],
-                dtype=np.int32
-            )
+                min_y = int(
+                    np.min(points[:, 1])
+                )
 
-            cv2.polylines(
-                frame,
-                [points],
-                isClosed=True,
-                color=RED,
-                thickness=LINE_THICKNESS
-            )
+                cv2.putText(
+                    frame,
+                    region["name"],
+                    (min_x, max(25, min_y - 8)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    RED,
+                    2,
+                    cv2.LINE_AA
+                )
 
-            min_x = int(
-                np.min(points[:, 0])
-            )
+            writer.write(frame)
 
-            min_y = int(
-                np.min(points[:, 1])
-            )
+            frame_number += 1
 
-            cv2.putText(
-                frame,
-                region["name"],
-                (
-                    min_x,
-                    max(25, min_y - 8)
-                ),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                RED,
-                2,
-                cv2.LINE_AA
-            )
+            if frame_number % 100 == 0:
+                percentage = (
+                    100 * frame_number / total_frames
+                    if total_frames > 0
+                    else 0
+                )
 
-        writer.write(frame)
+                print(
+                    f"\rProcessed "
+                    f"{frame_number}/{total_frames} "
+                    f"frames ({percentage:.1f}%)",
+                    end="",
+                    flush=True
+                )
 
-        frame_number += 1
-
-        # Print progress occasionally rather than printing
-        # thousands of lines for a long video.
-        if frame_number % 100 == 0:
-
-            percentage = (
-                100 * frame_number / total_frames
-                if total_frames > 0
-                else 0
-            )
-
-            print(
-                f"\rProcessed "
-                f"{frame_number}/{total_frames} "
-                f"frames "
-                f"({percentage:.1f}%)",
-                end=""
-            )
-
-    capture.release()
-    writer.release()
+    finally:
+        capture.release()
+        writer.release()
 
     print(
-        f"\nAnnotated video saved to:\n{output_path}"
+        f"\nAnnotated video finished:\n{output_path}"
     )
 
 
 # ============================================================
-# MAIN ANNOTATION GUI
+# ANNOTATE ONE VIDEO
 # ============================================================
 
 def annotate_video(
     video_path,
-    output_dir,
+    working_output_dir,
     frame_number=0
 ):
     """
-    Main annotation workflow.
+    Open one video, let the user annotate ROIs, save the ROI
+    files, and generate the full annotated video.
+
+    Returns:
+        True  -> completed successfully
+        False -> user pressed Q and skipped/cancelled this video
     """
 
     global original_frame
     global display_scale
     global drawing_mode
     global current_points
+    global regions
 
     video_path = Path(video_path)
-    output_dir = Path(output_dir)
+    working_output_dir = Path(working_output_dir)
 
-    # --------------------------------------------------------
-    # Open video
-    # --------------------------------------------------------
+    # Reset every piece of state for this video.
+    current_points = []
+    regions = []
+    drawing_mode = "polygon"
+    original_frame = None
+    display_scale = 1.0
 
+    # Open video and extract the chosen reference frame.
     capture = cv2.VideoCapture(
         str(video_path)
     )
 
     if not capture.isOpened():
-
         raise RuntimeError(
             f"Could not open video: {video_path}"
         )
 
     total_frames = int(
-        capture.get(
-            cv2.CAP_PROP_FRAME_COUNT
-        )
+        capture.get(cv2.CAP_PROP_FRAME_COUNT)
     )
 
     fps = capture.get(
         cv2.CAP_PROP_FPS
     )
 
-    # Ensure requested frame exists.
+    if total_frames <= 0:
+        capture.release()
+        raise RuntimeError(
+            f"Video reported zero frames: {video_path}"
+        )
+
     frame_number = max(
         0,
-        min(
-            frame_number,
-            total_frames - 1
-        )
+        min(frame_number, total_frames - 1)
     )
 
-    # Jump directly to selected frame.
     capture.set(
         cv2.CAP_PROP_POS_FRAMES,
         frame_number
@@ -846,7 +986,6 @@ def annotate_video(
     capture.release()
 
     if not success:
-
         raise RuntimeError(
             f"Could not read frame {frame_number}"
         )
@@ -863,79 +1002,34 @@ def annotate_video(
     print("\n============================================")
     print("THERMAL VIDEO ROI ANNOTATOR")
     print("============================================")
-
-    print(
-        f"Video: {video_path.name}"
-    )
-
-    print(
-        f"Resolution: {width} x {height}"
-    )
-
-    print(
-        f"FPS: {fps:.3f}"
-    )
-
-    print(
-        f"Frames: {total_frames}"
-    )
-
-    print(
-        f"Reference frame: {frame_number}"
-    )
+    print(f"Video: {video_path}")
+    print(f"Resolution: {width} x {height}")
+    print(f"FPS: {fps:.3f}")
+    print(f"Frames: {total_frames}")
+    print(f"Reference frame: {frame_number}")
 
     if fps > 0:
-
         print(
             f"Reference time: "
             f"{frame_number / fps:.2f} seconds"
         )
 
-    print(
-        "\nControls:"
+    print("\nControls:")
+    print("  Left Click  -> Add point")
+    print("  ENTER       -> Confirm current ROI")
+    print("  BACKSPACE   -> Remove previous point")
+    print("  P           -> Polygon mode")
+    print("  R           -> Rectangle mode")
+    print("  U           -> Remove last confirmed ROI")
+    print("  C           -> Clear current unfinished ROI")
+    print("  S           -> Save this video and generate annotated MP4")
+    print("  Q           -> Skip/cancel this video without replacing old output")
+    print("  Ctrl+C      -> Stop the whole batch")
+
+    # Create GUI window.
+    window_name = (
+        f"Thermal ROI Annotator - {video_path.name}"
     )
-
-    print(
-        "  Left Click  -> Add point"
-    )
-
-    print(
-        "  ENTER       -> Confirm current ROI"
-    )
-
-    print(
-        "  BACKSPACE   -> Remove previous point"
-    )
-
-    print(
-        "  P           -> Polygon mode"
-    )
-
-    print(
-        "  R           -> Rectangle mode"
-    )
-
-    print(
-        "  U           -> Remove last confirmed ROI"
-    )
-
-    print(
-        "  C           -> Clear current unfinished ROI"
-    )
-
-    print(
-        "  S           -> Save and finish"
-    )
-
-    print(
-        "  Q           -> Quit without saving"
-    )
-
-    # --------------------------------------------------------
-    # Create annotation window
-    # --------------------------------------------------------
-
-    window_name = "Thermal ROI Annotator"
 
     cv2.namedWindow(
         window_name,
@@ -947,12 +1041,9 @@ def annotate_video(
         mouse_callback
     )
 
-    # --------------------------------------------------------
-    # Main GUI loop
-    # --------------------------------------------------------
+    user_saved = False
 
     while True:
-
         preview = draw_annotation_preview()
 
         cv2.imshow(
@@ -962,153 +1053,335 @@ def annotate_video(
 
         key = cv2.waitKey(20) & 0xFF
 
-        # ----------------------------------------------------
         # ENTER
-        # ----------------------------------------------------
-
         if key in (10, 13):
-
             confirm_current_region()
 
-        # ----------------------------------------------------
         # BACKSPACE
-        # ----------------------------------------------------
-
         elif key == 8:
-
             if current_points:
-
                 removed = current_points.pop()
+                print(f"Removed point: {removed}")
 
-                print(
-                    f"Removed point: {removed}"
-                )
-
-        # ----------------------------------------------------
-        # POLYGON MODE
-        # ----------------------------------------------------
-
-        elif key in (
-            ord("p"),
-            ord("P")
-        ):
-
+        # P -> polygon
+        elif key in (ord("p"), ord("P")):
             current_points = []
             drawing_mode = "polygon"
+            print("\nSwitched to POLYGON mode.")
 
-            print(
-                "\nSwitched to POLYGON mode."
-            )
-
-        # ----------------------------------------------------
-        # RECTANGLE MODE
-        # ----------------------------------------------------
-
-        elif key in (
-            ord("r"),
-            ord("R")
-        ):
-
+        # R -> rectangle
+        elif key in (ord("r"), ord("R")):
             current_points = []
             drawing_mode = "rectangle"
+            print("\nSwitched to RECTANGLE mode.")
 
-            print(
-                "\nSwitched to RECTANGLE mode."
-            )
-
-        # ----------------------------------------------------
-        # UNDO LAST CONFIRMED REGION
-        # ----------------------------------------------------
-
-        elif key in (
-            ord("u"),
-            ord("U")
-        ):
-
+        # U -> undo confirmed region
+        elif key in (ord("u"), ord("U")):
             if regions:
-
                 removed_region = regions.pop()
-
                 print(
                     f"\nRemoved region: "
                     f"{removed_region['name']}"
                 )
 
-        # ----------------------------------------------------
-        # CLEAR CURRENT UNFINISHED REGION
-        # ----------------------------------------------------
-
-        elif key in (
-            ord("c"),
-            ord("C")
-        ):
-
+        # C -> clear unfinished region
+        elif key in (ord("c"), ord("C")):
             current_points = []
-
             print(
                 "\nCurrent unfinished annotation cleared."
             )
 
-        # ----------------------------------------------------
-        # SAVE
-        # ----------------------------------------------------
-
-        elif key in (
-            ord("s"),
-            ord("S")
-        ):
-
+        # S -> save current video
+        elif key in (ord("s"), ord("S")):
             if not regions:
-
                 print(
                     "\nNo regions have been annotated yet."
                 )
-
                 continue
 
             save_annotations(
-                output_dir=output_dir,
+                output_dir=working_output_dir,
                 video_path=video_path,
                 reference_frame_number=frame_number,
                 fps=fps,
                 total_frames=total_frames
             )
 
+            user_saved = True
             break
 
-        # ----------------------------------------------------
-        # QUIT
-        # ----------------------------------------------------
-
-        elif key in (
-            ord("q"),
-            ord("Q")
-        ):
-
+        # Q -> cancel / skip this video
+        elif key in (ord("q"), ord("Q")):
             print(
-                "\nExiting without saving."
+                "\nCurrent video cancelled. "
+                "No completed output will be replaced."
             )
+            break
 
-            cv2.destroyAllWindows()
-
-            return
-
+    cv2.destroyWindow(window_name)
     cv2.destroyAllWindows()
 
-    # --------------------------------------------------------
-    # Apply saved ROIs to whole video
-    # --------------------------------------------------------
+    if not user_saved:
+        return False
 
+    # Generate full annotated video.
     annotated_video_path = (
-        output_dir /
-        "annotated_video.mp4"
+        working_output_dir / "annotated_video.mp4"
     )
 
     create_annotated_video(
         video_path=video_path,
         output_path=annotated_video_path,
-        regions=regions
+        regions_to_draw=regions
     )
+
+    return True
+
+
+# ============================================================
+# PROCESS ONE VIDEO SAFELY
+# ============================================================
+
+def process_one_video(
+    video_path,
+    final_output_dir,
+    frame_number=0
+):
+    """
+    Process one video in a temporary sibling folder.
+
+    Only promote it to final_output_dir after ALL output files,
+    including annotated_video.mp4, have completed.
+    """
+
+    final_output_dir = Path(final_output_dir)
+
+    working_output_dir = final_output_dir.with_name(
+        final_output_dir.name + ".__processing__"
+    )
+
+    # A temp folder means an older run was interrupted.
+    if working_output_dir.exists():
+        print(
+            f"\nRemoving previous incomplete working folder:\n"
+            f"{working_output_dir}"
+        )
+        safe_remove_directory(working_output_dir)
+
+    working_output_dir.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    try:
+        completed = annotate_video(
+            video_path=video_path,
+            working_output_dir=working_output_dir,
+            frame_number=frame_number
+        )
+
+        if not completed:
+            safe_remove_directory(
+                working_output_dir
+            )
+            return False
+
+        if not is_annotation_complete(
+            working_output_dir
+        ):
+            raise RuntimeError(
+                "Annotation finished, but required output files "
+                "are missing or empty."
+            )
+
+        finalize_completed_output(
+            working_dir=working_output_dir,
+            final_dir=final_output_dir
+        )
+
+        print("\n============================================")
+        print("VIDEO COMPLETED AND SAVED")
+        print("============================================")
+        print(final_output_dir)
+
+        return True
+
+    except KeyboardInterrupt:
+        print(
+            "\n\nBatch interrupted by user."
+            "\nPreviously completed videos are safe."
+            f"\nCurrent incomplete work is in:\n"
+            f"{working_output_dir}"
+        )
+        raise
+
+    except Exception:
+        print(
+            f"\nProcessing failed for:\n{video_path}"
+            f"\nIncomplete working data kept at:\n"
+            f"{working_output_dir}"
+        )
+        raise
+
+
+# ============================================================
+# BATCH DRIVER
+# ============================================================
+
+def process_input(
+    input_path,
+    output_root=DEFAULT_OUTPUT_ROOT,
+    frame_number=0
+):
+    """
+    Main batch workflow.
+
+    For each discovered MP4:
+      - determine its mirrored output directory
+      - detect whether it is already completed
+      - ask whether to process / redo / skip
+      - save each finished video immediately before moving on
+    """
+
+    input_path = Path(input_path).resolve()
+    output_root = Path(output_root).resolve()
+
+    videos = discover_mp4_videos(
+        input_path
+    )
+
+    if not videos:
+        print(
+            f"No MP4 videos found under:\n{input_path}"
+        )
+        return
+
+    output_root.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    print("\n============================================")
+    print("THERMAL VIDEO BATCH ANNOTATOR")
+    print("============================================")
+    print(f"Input : {input_path}")
+    print(f"Output: {output_root}")
+    print(f"MP4 videos found: {len(videos)}")
+
+    completed_this_run = 0
+    skipped_this_run = 0
+    failed_this_run = 0
+
+    for index, video_path in enumerate(
+        videos,
+        start=1
+    ):
+        final_output_dir = build_output_dir(
+            video_path=video_path,
+            input_path=input_path,
+            output_root=output_root
+        )
+
+        print("\n\n" + "=" * 70)
+        print(
+            f"[{index}/{len(videos)}] {video_path}"
+        )
+        print(
+            f"Output folder: {final_output_dir}"
+        )
+        print("=" * 70)
+
+        already_complete = is_annotation_complete(
+            final_output_dir
+        )
+
+        partial_output = (
+            has_any_output(final_output_dir)
+            and not already_complete
+        )
+
+        # Already parsed.
+        if already_complete:
+            print(
+                "\nThis video is already parsed."
+                "\nFound regions.json + regions.pkl + annotated_video.mp4."
+            )
+
+            should_process = prompt_yes_no(
+                "Redo this video?",
+                default=False
+            )
+
+            if not should_process:
+                print("Skipped.")
+                skipped_this_run += 1
+                continue
+
+        # Partial / incomplete old result.
+        elif partial_output:
+            print(
+                "\nA partial/incomplete output folder already exists."
+                "\nIt is NOT considered parsed because one or more "
+                "required files are missing."
+            )
+
+            should_process = prompt_yes_no(
+                f'Processing "{video_path.name}" from the beginning?',
+                default=True
+            )
+
+            if not should_process:
+                print("Skipped.")
+                skipped_this_run += 1
+                continue
+
+        # New video.
+        else:
+            should_process = prompt_yes_no(
+                f'Processing "{video_path.name}"?',
+                default=True
+            )
+
+            if not should_process:
+                print("Skipped.")
+                skipped_this_run += 1
+                continue
+
+        # Run annotation.
+        try:
+            success = process_one_video(
+                video_path=video_path,
+                final_output_dir=final_output_dir,
+                frame_number=frame_number
+            )
+
+            if success:
+                completed_this_run += 1
+            else:
+                # Q inside GUI cancels current video and moves on.
+                skipped_this_run += 1
+
+        except KeyboardInterrupt:
+            # Ctrl+C stops the entire batch.
+            break
+
+        except Exception as exc:
+            failed_this_run += 1
+
+            print(
+                f"\nERROR: {exc}"
+            )
+
+            # One damaged video should not waste the rest.
+            continue
+
+    print("\n\n============================================")
+    print("BATCH FINISHED")
+    print("============================================")
+    print(f"Completed this run: {completed_this_run}")
+    print(f"Skipped:            {skipped_this_run}")
+    print(f"Failed:             {failed_this_run}")
+    print(f"Output root:        {output_root}")
 
 
 # ============================================================
@@ -1116,24 +1389,27 @@ def annotate_video(
 # ============================================================
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description=(
-            "Annotate fixed ROIs in thermal-camera videos."
+            "Annotate fixed ROIs in one thermal MP4 or "
+            "recursively process every MP4 inside a folder."
         )
     )
 
     parser.add_argument(
-        "video",
-        help="Path to the thermal video"
+        "input",
+        help=(
+            "Path to one .mp4 file OR a folder such as "
+            "'raw-videos'. Folder mode searches recursively."
+        )
     )
 
     parser.add_argument(
         "--output",
-        default="annotated-videos",
+        default=DEFAULT_OUTPUT_ROOT,
         help=(
-            "Folder where JSON, PKL, images and video "
-            "will be saved"
+            "Root output folder. "
+            f"Default: {DEFAULT_OUTPUT_ROOT}"
         )
     )
 
@@ -1142,15 +1418,16 @@ if __name__ == "__main__":
         type=int,
         default=0,
         help=(
-            "Video frame number to use for annotation. "
-            "Default: 0"
+            "Reference frame number used for annotation. "
+            "In folder mode the same frame number is used "
+            "for each video. Default: 0"
         )
     )
 
     args = parser.parse_args()
 
-    annotate_video(
-        video_path=args.video,
-        output_dir=args.output,
+    process_input(
+        input_path=args.input,
+        output_root=args.output,
         frame_number=args.frame
     )
