@@ -1,0 +1,19 @@
+{
+    "video": "97. A- 200 Corridor Thermal__TO__95.fur incin AB Stacks Thermal__phase_b_test.mp4",
+    "views": [
+        {
+            "id": 1,
+            "name": "VIEW_001",
+            "created_frame": 0,
+            "created_timestamp_seconds": 0.0,
+            "reference_image": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\phase-b-scene-change-detection\\97. A- 200 Corridor Thermal__TO__95.fur incin AB Stacks Thermal__phase_b_test\\view-library\\VIEW_001_reference.png"
+        },
+        {
+            "id": 2,
+            "name": "VIEW_002",
+            "created_frame": 140,
+            "created_timestamp_seconds": 5.672609400324149,
+            "reference_image": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\phase-b-scene-change-detection\\97. A- 200 Corridor Thermal__TO__95.fur incin AB Stacks Thermal__phase_b_test\\view-library\\VIEW_002_reference.png"
+        }
+    ]
+}
