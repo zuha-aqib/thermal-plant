@@ -1,0 +1,21 @@
+{
+    "video": "incidental_001.mp4",
+    "fps": 24.312,
+    "total_frames": 349,
+    "known_views": 2,
+    "state_frame_counts": {
+        "STABLE": 245,
+        "MOVING": 74,
+        "NEW_STABLE_VIEW": 30
+    },
+    "event_counts": {
+        "MOVEMENT_STARTED": 2,
+        "NEW_STABLE_VIEW": 1,
+        "RETURN_TO_KNOWN_VIEW": 1,
+        "SAME_VIEW_RESTABILIZED": 0
+    },
+    "output_video": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\phase-b-scene-change-detection\\95.fur incin AB Stacks Thermal__TO__97. A- 200 Corridor Thermal\\incidental_001.__processing__\\scene_state_video.mp4",
+    "scene_state_log": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\phase-b-scene-change-detection\\95.fur incin AB Stacks Thermal__TO__97. A- 200 Corridor Thermal\\incidental_001.__processing__\\scene_state_log.csv",
+    "scene_events": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\phase-b-scene-change-detection\\95.fur incin AB Stacks Thermal__TO__97. A- 200 Corridor Thermal\\incidental_001.__processing__\\scene_events.csv",
+    "view_library": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\phase-b-scene-change-detection\\95.fur incin AB Stacks Thermal__TO__97. A- 200 Corridor Thermal\\incidental_001.__processing__\\view_library.json"
+}

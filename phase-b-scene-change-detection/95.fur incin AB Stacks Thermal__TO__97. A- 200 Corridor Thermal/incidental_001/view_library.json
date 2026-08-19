@@ -1,0 +1,19 @@
+{
+    "video": "incidental_001.mp4",
+    "views": [
+        {
+            "id": 1,
+            "name": "VIEW_001",
+            "created_frame": 0,
+            "created_timestamp_seconds": 0.0,
+            "reference_image": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\phase-b-scene-change-detection\\95.fur incin AB Stacks Thermal__TO__97. A- 200 Corridor Thermal\\incidental_001.__processing__\\view-library\\VIEW_001_reference.png"
+        },
+        {
+            "id": 2,
+            "name": "VIEW_002",
+            "created_frame": 137,
+            "created_timestamp_seconds": 5.635077328068443,
+            "reference_image": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\phase-b-scene-change-detection\\95.fur incin AB Stacks Thermal__TO__97. A- 200 Corridor Thermal\\incidental_001.__processing__\\view-library\\VIEW_002_reference.png"
+        }
+    ]
+}

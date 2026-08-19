@@ -1,0 +1,45 @@
+{
+    "manifest_version": 1,
+    "stage": "phase_b_scene_change_detector",
+    "status": "completed",
+    "created_at_utc": "2026-08-19T13:25:10+00:00",
+    "source_video": {
+        "path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\synthetic-incidental-videos\\95.fur incin AB Stacks Thermal__TO__97. A- 200 Corridor Thermal\\incidental_001.mp4",
+        "filename": "incidental_001.mp4",
+        "size_bytes": 3694211,
+        "mtime_ns": 1787144744308818100,
+        "sha256": "56ca862bb6592b33344243f8efcd51844062131cafa9afd748b7ac3324478c61"
+    },
+    "inputs": {},
+    "settings": {
+        "analysis_width": 640,
+        "ignore_top_fraction": 0.05,
+        "ignore_bottom_fraction": 0.03,
+        "ignore_left_fraction": 0.02,
+        "ignore_right_fraction": 0.12,
+        "max_channel_difference": 25,
+        "moving_translation_threshold_pixels": 2.0,
+        "stable_translation_threshold_pixels": 0.8,
+        "moving_rotation_threshold_deg": 0.12,
+        "stable_rotation_threshold_deg": 0.06,
+        "moving_edge_change_threshold": 0.12,
+        "stable_edge_change_threshold": 0.07,
+        "failed_tracking_change_threshold": 0.1,
+        "min_motion_inliers": 10,
+        "min_motion_inlier_ratio": 0.35,
+        "moving_confirm_frames": 3,
+        "stable_confirm_frames": 12,
+        "scene_min_matches": 20,
+        "scene_min_inliers": 12,
+        "scene_min_inlier_ratio": 0.3,
+        "new_view_banner_frames": 30
+    },
+    "outputs": {
+        "scene_state_video": "scene_state_video.mp4",
+        "scene_state_log_csv": "scene_state_log.csv",
+        "scene_events_csv": "scene_events.csv",
+        "view_library_json": "view_library.json",
+        "scene_summary_json": "scene_summary.json",
+        "view_library_directory": "view-library"
+    }
+}
