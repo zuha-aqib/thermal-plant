@@ -7,6 +7,8 @@ from pathlib import Path
 
 import numpy as np
 
+import step_code as ps
+
 
 # ============================================================
 # CONFIGURATION
@@ -51,14 +53,16 @@ LINE_THICKNESS = 2
 #
 DEFAULT_OUTPUT_ROOT = "step-01-annotate-videos"
 
-# A video is considered "already parsed" only when BOTH
-# coordinate files and the final annotated video are present
-# and non-empty.
-REQUIRED_COMPLETION_FILES = (
+# Base files prove that the old Step-01 workflow finished.
+# The manifest is stored separately so pre-manifest/legacy outputs can
+# still be recognized instead of being misclassified as partial.
+REQUIRED_BASE_FILES = (
     "regions.json",
     "regions.pkl",
     "annotated_video.mp4",
 )
+
+MANIFEST_FILENAME = "stage_01_manifest.json"
 
 
 # ============================================================
@@ -199,150 +203,134 @@ def build_output_dir(video_path, input_path, output_root):
 
 
 def file_exists_and_nonempty(path):
-    """Return True only if a regular file exists and has data."""
-    path = Path(path)
+    """Delegate the shared non-empty-file check to step_code.py."""
+    return ps.file_exists_and_nonempty(path)
 
-    return (
-        path.is_file()
-        and path.stat().st_size > 0
+
+def is_annotation_base_complete(output_dir):
+    """True for both legacy and tracked completed Step-01 outputs."""
+    return ps.verify_required_files(
+        output_dir,
+        REQUIRED_BASE_FILES,
     )
 
 
 def is_annotation_complete(output_dir):
-    """
-    A video counts as already parsed only when it has:
-      - regions.json
-      - regions.pkl
-      - annotated_video.mp4
-
-    All three must exist and must be non-empty.
-    """
-
+    """True only when base outputs AND the provenance manifest exist."""
     output_dir = Path(output_dir)
 
-    if not output_dir.is_dir():
-        return False
-
-    return all(
-        file_exists_and_nonempty(output_dir / filename)
-        for filename in REQUIRED_COMPLETION_FILES
+    return (
+        is_annotation_base_complete(output_dir)
+        and file_exists_and_nonempty(
+            output_dir / MANIFEST_FILENAME
+        )
     )
 
 
 def has_any_output(output_dir):
-    """
-    Detect whether an output folder exists and contains anything.
-
-    This lets us distinguish:
-      - no previous work
-      - partial/incomplete work
-      - completed work
-    """
-
-    output_dir = Path(output_dir)
-
-    if not output_dir.is_dir():
-        return False
-
-    try:
-        next(output_dir.iterdir())
-        return True
-    except StopIteration:
-        return False
+    """Use the shared output-folder check."""
+    return ps.has_any_output(output_dir)
 
 
 def prompt_yes_no(message, default=True):
-    """
-    Reusable Y/N prompt.
-
-    default=True  -> [Y/n]
-    default=False -> [y/N]
-    """
-
-    suffix = " [Y/n]: " if default else " [y/N]: "
-
-    while True:
-        answer = input(message + suffix).strip().lower()
-
-        if not answer:
-            return default
-
-        if answer in ("y", "yes"):
-            return True
-
-        if answer in ("n", "no"):
-            return False
-
-        print("Please enter Y or N.")
+    """Use one consistent prompt implementation across all stages."""
+    return ps.prompt_yes_no(message, default=default)
 
 
 def safe_remove_directory(path):
-    """Delete a directory tree if it exists."""
-    path = Path(path)
-
-    if path.exists():
-        shutil.rmtree(path)
+    """Use the shared safe-removal helper."""
+    ps.safe_remove(path)
 
 
 def finalize_completed_output(working_dir, final_dir):
-    """
-    Promote a fully completed temporary result into the final
-    per-video output directory.
+    """Use the shared safe promotion/backup logic."""
+    ps.promote_completed_directory(working_dir, final_dir)
 
-    WHY USE A TEMPORARY FOLDER?
-    ---------------------------
-    Suppose a video was already completed and the user chooses
-    to redo it. If we immediately overwrite regions.json and the
-    script gets interrupted while generating annotated_video.mp4,
-    we could end up with NEW coordinates + OLD video.
 
-    Instead we build everything inside:
+def resolve_reference_frame(video_path, requested_frame):
+    """Clamp a requested frame exactly the same way annotation does."""
+    capture = cv2.VideoCapture(str(video_path))
 
-        video_name.__processing__/
+    if not capture.isOpened():
+        raise RuntimeError(f"Could not open video: {video_path}")
 
-    Only after the new annotated video finishes successfully do
-    we replace:
+    total_frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+    capture.release()
 
-        video_name/
+    if total_frames <= 0:
+        raise RuntimeError(f"Video reported zero frames: {video_path}")
 
-    This also means stopping a long batch run does NOT damage
-    previously completed videos.
-    """
+    return max(0, min(int(requested_frame), total_frames - 1))
 
-    working_dir = Path(working_dir)
-    final_dir = Path(final_dir)
 
-    final_dir.parent.mkdir(
-        parents=True,
-        exist_ok=True
+def build_stage_01_manifest(video_path, working_output_dir):
+    """Create the provenance receipt for one completed annotation run."""
+    working_output_dir = Path(working_output_dir)
+
+    regions_path = working_output_dir / "regions.json"
+    regions_data = ps.load_json(regions_path)
+
+    reference_frame = int(
+        regions_data.get("video", {}).get("reference_frame_number", 0)
     )
 
-    # Keep a short-lived backup only during the final swap.
-    backup_dir = final_dir.with_name(
-        final_dir.name + ".__backup__"
+    source_fingerprint = ps.fingerprint_video(video_path)
+
+    return ps.make_manifest(
+        "step_01",
+        source_video=source_fingerprint,
+        inputs={},
+        settings={
+            "reference_frame_number": reference_frame,
+        },
+        outputs={
+            "regions_json_sha256": ps.hash_json_file(regions_path),
+            "regions_pkl_filename": "regions.pkl",
+            "annotated_video_filename": "annotated_video.mp4",
+        },
     )
 
-    safe_remove_directory(backup_dir)
 
-    # If an old final result exists, move it out of the way.
-    if final_dir.exists():
-        final_dir.rename(backup_dir)
+def step_01_stale_reasons(
+    existing_manifest,
+    current_source,
+    desired_reference_frame,
+    output_dir,
+):
+    """Explain why an existing tracked Step-01 result is no longer current."""
+    reasons = []
 
-    try:
-        # working_dir and final_dir are siblings, so this rename
-        # stays on the same drive and is normally very fast.
-        working_dir.rename(final_dir)
+    old_source = existing_manifest.get("source_video", {})
 
-    except Exception:
-        # If promotion fails, restore the old completed result.
-        if backup_dir.exists() and not final_dir.exists():
-            backup_dir.rename(final_dir)
+    if not ps.same_file_content(old_source, current_source):
+        reasons.append("Source/raw video content changed")
 
-        raise
+    old_reference = existing_manifest.get("settings", {}).get(
+        "reference_frame_number"
+    )
 
-    else:
-        # New result is safely in place. Old backup can go.
-        safe_remove_directory(backup_dir)
+    if old_reference != int(desired_reference_frame):
+        reasons.append(
+            f"Requested reference frame changed ({old_reference} -> {desired_reference_frame})"
+        )
+
+    # If somebody manually edits regions.json after Step 01 completed, the
+    # old annotated_video.mp4 no longer represents those coordinates.
+    regions_path = Path(output_dir) / "regions.json"
+    stored_regions_hash = existing_manifest.get("outputs", {}).get(
+        "regions_json_sha256"
+    )
+
+    if ps.file_exists_and_nonempty(regions_path):
+        current_regions_hash = ps.hash_json_file(regions_path)
+
+        if stored_regions_hash != current_regions_hash:
+            reasons.append(
+                "regions.json changed after the tracked Step-01 run "
+                "(annotated_video.mp4 is based on older coordinates)"
+            )
+
+    return reasons
 
 
 # ============================================================
@@ -1186,12 +1174,30 @@ def process_one_video(
             )
             return False
 
-        if not is_annotation_complete(
+        if not is_annotation_base_complete(
             working_output_dir
         ):
             raise RuntimeError(
-                "Annotation finished, but required output files "
+                "Annotation finished, but required base output files "
                 "are missing or empty."
+            )
+
+        # Only write the provenance manifest after coordinates and the
+        # full annotated MP4 have completed successfully.
+        manifest = build_stage_01_manifest(
+            video_path=video_path,
+            working_output_dir=working_output_dir,
+        )
+
+        ps.save_json_atomic(
+            working_output_dir / MANIFEST_FILENAME,
+            manifest,
+        )
+
+        if not is_annotation_complete(working_output_dir):
+            raise RuntimeError(
+                "Step-01 manifest was written, but the tracked output "
+                "still failed completion validation."
             )
 
         finalize_completed_output(
@@ -1291,43 +1297,100 @@ def process_input(
         )
         print("=" * 70)
 
-        already_complete = is_annotation_complete(
-            final_output_dir
-        )
+        base_complete = is_annotation_base_complete(final_output_dir)
+        tracked_complete = is_annotation_complete(final_output_dir)
 
         partial_output = (
             has_any_output(final_output_dir)
-            and not already_complete
+            and not base_complete
         )
 
-        # Already parsed.
-        if already_complete:
-            print(
-                "\nThis video is already parsed."
-                "\nFound regions.json + regions.pkl + annotated_video.mp4."
+        # ----------------------------------------------------
+        # TRACKED COMPLETION: determine CURRENT vs STALE.
+        # ----------------------------------------------------
+        if tracked_complete:
+            existing_manifest = ps.load_manifest(
+                final_output_dir / MANIFEST_FILENAME
             )
 
-            should_process = prompt_yes_no(
-                "Redo this video?",
-                default=False
+            print("\nChecking Step-01 provenance...")
+            current_source = ps.fingerprint_video(video_path)
+            desired_reference = resolve_reference_frame(
+                video_path,
+                frame_number,
             )
+
+            stale_reasons = step_01_stale_reasons(
+                existing_manifest=existing_manifest or {},
+                current_source=current_source,
+                desired_reference_frame=desired_reference,
+                output_dir=final_output_dir,
+            )
+
+            if not stale_reasons:
+                print(
+                    "\nSTEP 01 STATUS: CURRENT"
+                    "\nThe existing annotations were produced from the "
+                    "current raw video and requested reference frame."
+                )
+
+                should_process = prompt_yes_no(
+                    "Redo this video anyway?",
+                    default=False,
+                )
+
+            else:
+                print("\nSTEP 01 STATUS: STALE")
+                print("The existing output no longer matches the requested inputs:")
+
+                for reason in stale_reasons:
+                    print(f"  - {reason}")
+
+                should_process = prompt_yes_no(
+                    "Redo Step 01 using the current inputs?",
+                    default=True,
+                )
 
             if not should_process:
                 print("Skipped.")
                 skipped_this_run += 1
                 continue
 
-        # Partial / incomplete old result.
+        # ----------------------------------------------------
+        # LEGACY COMPLETION: valid old files, no manifest.
+        # ----------------------------------------------------
+        elif base_complete:
+            print(
+                "\nSTEP 01 STATUS: LEGACY / UNTRACKED"
+                "\nFound regions.json + regions.pkl + annotated_video.mp4, "
+                "but no stage_01_manifest.json."
+                "\nThe old result is preserved, but its raw-video dependency "
+                "cannot be proven automatically."
+            )
+
+            should_process = prompt_yes_no(
+                "Redo this video to enable provenance tracking?",
+                default=False,
+            )
+
+            if not should_process:
+                print("Skipped. Existing legacy output was not changed.")
+                skipped_this_run += 1
+                continue
+
+        # ----------------------------------------------------
+        # PARTIAL / INCOMPLETE old result.
+        # ----------------------------------------------------
         elif partial_output:
             print(
-                "\nA partial/incomplete output folder already exists."
-                "\nIt is NOT considered parsed because one or more "
-                "required files are missing."
+                "\nSTEP 01 STATUS: PARTIAL"
+                "\nAn incomplete output folder exists. One or more base "
+                "completion files are missing."
             )
 
             should_process = prompt_yes_no(
-                f'Processing "{video_path.name}" from the beginning?',
-                default=True
+                f'Process "{video_path.name}" again from the beginning?',
+                default=True,
             )
 
             if not should_process:
@@ -1335,11 +1398,15 @@ def process_input(
                 skipped_this_run += 1
                 continue
 
-        # New video.
+        # ----------------------------------------------------
+        # NEW video.
+        # ----------------------------------------------------
         else:
+            print("\nSTEP 01 STATUS: NEW")
+
             should_process = prompt_yes_no(
                 f'Processing "{video_path.name}"?',
-                default=True
+                default=True,
             )
 
             if not should_process:

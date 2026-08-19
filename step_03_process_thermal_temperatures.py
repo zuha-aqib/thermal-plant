@@ -10,8 +10,19 @@ import cv2
 import numpy as np
 import pytesseract
 
+import step_code as ps
+
 # Default Stage-3 output root.
 DEFAULT_OUTPUT_ROOT = "step-03-roi-videos"
+
+CORE_COMPLETION_FILES = (
+    "scale_readings.csv",
+    "temperature_log.csv",
+    "temperature_summary.csv",
+)
+
+PROCESSED_VIDEO_FILENAME = "thermal_temperature_output.mp4"
+MANIFEST_FILENAME = "stage_03_manifest.json"
 
 
 # ============================================================
@@ -2138,6 +2149,230 @@ def process_video(
 
 
 # ============================================================
+# STAGE-3 STATE / PROVENANCE HELPERS
+# ============================================================
+
+def required_stage_03_files(write_video):
+    """Return the files required for one particular Step-03 run."""
+    required = list(CORE_COMPLETION_FILES)
+
+    if write_video:
+        required.append(PROCESSED_VIDEO_FILENAME)
+
+    return tuple(required)
+
+
+def is_stage_03_legacy_base_complete(output_dir):
+    """Recognize pre-manifest Step-03 output using the core CSV files."""
+    return ps.verify_required_files(output_dir, CORE_COMPLETION_FILES)
+
+
+def is_stage_03_tracked_complete(output_dir):
+    """Validate a tracked run using the settings stored in its manifest."""
+    output_dir = Path(output_dir)
+    manifest = ps.load_manifest(output_dir / MANIFEST_FILENAME)
+
+    if not manifest:
+        return False
+
+    write_video = bool(
+        manifest.get("settings", {}).get("write_video", True)
+    )
+
+    return ps.verify_required_files(
+        output_dir,
+        required_stage_03_files(write_video),
+    )
+
+
+def upstream_tracking_warnings(
+    *,
+    current_source,
+    regions_json_path,
+    scale_config_json_path,
+):
+    """Check whether tracked Step-01/02 inputs are themselves stale.
+
+    Step 03 can technically consume any JSON files the user supplies, but if
+    their sibling manifests prove those files belong to an older raw-video
+    revision, proceeding silently would defeat the provenance system.
+    """
+    warnings = []
+
+    regions_json_path = Path(regions_json_path)
+    scale_config_json_path = Path(scale_config_json_path)
+
+    stage_01_manifest = ps.load_manifest(
+        regions_json_path.parent / "stage_01_manifest.json"
+    )
+
+    if stage_01_manifest:
+        if not ps.same_file_content(
+            stage_01_manifest.get("source_video", {}),
+            current_source,
+        ):
+            warnings.append(
+                "Step 01 annotations are tracked against a different raw-video revision"
+            )
+
+        stored_regions_hash = stage_01_manifest.get("outputs", {}).get(
+            "regions_json_sha256"
+        )
+        current_regions_hash = ps.hash_json_file(regions_json_path)
+
+        if stored_regions_hash != current_regions_hash:
+            warnings.append(
+                "regions.json no longer matches its Step-01 completion manifest"
+            )
+
+    stage_02_manifest = ps.load_manifest(
+        scale_config_json_path.parent / "stage_02_manifest.json"
+    )
+
+    if stage_02_manifest:
+        if not ps.same_file_content(
+            stage_02_manifest.get("source_video", {}),
+            current_source,
+        ):
+            warnings.append(
+                "Step 02 OCR/scale configuration is tracked against a different raw-video revision"
+            )
+
+        stored_scale_hash = stage_02_manifest.get("outputs", {}).get(
+            "scale_config_json_sha256"
+        )
+        current_scale_hash = ps.hash_json_file(scale_config_json_path)
+
+        if stored_scale_hash != current_scale_hash:
+            warnings.append(
+                "scale_config.json no longer matches its Step-02 completion manifest"
+            )
+
+    return warnings
+
+
+def normalized_stage_03_settings(
+    *,
+    ocr_every,
+    effective_ocr_hz,
+    start_frame,
+    end_frame,
+    erode_pixels,
+    max_channel_difference,
+    min_allowed_temp,
+    max_allowed_temp,
+    min_scale_span,
+    max_scale_jump,
+    write_video,
+):
+    """Build the exact processing settings that affect Step-03 output."""
+    return {
+        "ocr_every_frames": int(ocr_every),
+        "effective_ocr_hz": float(effective_ocr_hz),
+        "start_frame": int(start_frame),
+        "end_frame": int(end_frame),
+        "erode_pixels": int(erode_pixels),
+        "max_channel_difference": int(max_channel_difference),
+        "min_allowed_temp": float(min_allowed_temp),
+        "max_allowed_temp": float(max_allowed_temp),
+        "min_scale_span_c": float(min_scale_span),
+        "max_scale_jump_c": float(max_scale_jump),
+        "write_video": bool(write_video),
+    }
+
+
+def build_stage_03_manifest(
+    *,
+    video_path,
+    regions_json_path,
+    scale_config_json_path,
+    source_fingerprint,
+    settings,
+):
+    """Create the Step-03 provenance receipt."""
+    return ps.make_manifest(
+        "step_03",
+        source_video=source_fingerprint,
+        inputs={
+            "regions_json_path": str(Path(regions_json_path).resolve()),
+            "regions_json_sha256": ps.hash_json_file(regions_json_path),
+            "scale_config_json_path": str(Path(scale_config_json_path).resolve()),
+            "scale_config_json_sha256": ps.hash_json_file(scale_config_json_path),
+        },
+        settings=settings,
+        outputs={
+            "scale_readings_csv": "scale_readings.csv",
+            "temperature_log_csv": "temperature_log.csv",
+            "temperature_summary_csv": "temperature_summary.csv",
+            "processed_video": (
+                PROCESSED_VIDEO_FILENAME if settings["write_video"] else None
+            ),
+        },
+    )
+
+
+def step_03_stale_reasons(
+    *,
+    existing_manifest,
+    current_source,
+    regions_json_path,
+    scale_config_json_path,
+    requested_settings,
+):
+    """Explain exactly why a tracked Step-03 result needs regeneration."""
+    reasons = []
+
+    if not ps.same_file_content(
+        existing_manifest.get("source_video", {}),
+        current_source,
+    ):
+        reasons.append("Raw/source video content changed")
+
+    current_regions_hash = ps.hash_json_file(regions_json_path)
+    old_regions_hash = existing_manifest.get("inputs", {}).get(
+        "regions_json_sha256"
+    )
+
+    if old_regions_hash != current_regions_hash:
+        reasons.append("Step 01 regions.json changed (equipment annotations changed)")
+
+    current_scale_hash = ps.hash_json_file(scale_config_json_path)
+    old_scale_hash = existing_manifest.get("inputs", {}).get(
+        "scale_config_json_sha256"
+    )
+
+    if old_scale_hash != current_scale_hash:
+        reasons.append("Step 02 scale_config.json changed (OCR/scale regions changed)")
+
+    old_settings = existing_manifest.get("settings", {})
+
+    friendly_names = {
+        "ocr_every_frames": "OCR interval",
+        "effective_ocr_hz": "effective OCR rate",
+        "start_frame": "start frame",
+        "end_frame": "end frame",
+        "erode_pixels": "ROI erosion",
+        "max_channel_difference": "max channel difference",
+        "min_allowed_temp": "minimum allowed temperature",
+        "max_allowed_temp": "maximum allowed temperature",
+        "min_scale_span_c": "minimum scale span",
+        "max_scale_jump_c": "maximum scale jump",
+        "write_video": "processed-video output mode",
+    }
+
+    for key, new_value in requested_settings.items():
+        old_value = old_settings.get(key)
+
+        if old_value != new_value:
+            reasons.append(
+                f"Step 03 {friendly_names.get(key, key)} changed "
+                f"({old_value} -> {new_value})"
+            )
+
+    return reasons
+
+
+# ============================================================
 # MAIN
 # ============================================================
 
@@ -2267,8 +2502,7 @@ def main():
         default=5.0,
         help=(
             "Reject OCR MIN/MAX pairs whose difference is smaller "
-            "than this many degrees C. Default 5.0. This prevents "
-            "bad pairs such as 0.1 C to 0.8 C from being accepted."
+            "than this many degrees C. Default 5.0."
         ),
     )
 
@@ -2278,49 +2512,33 @@ def main():
         default=2.5,
         help=(
             "Maximum allowed change in either scale MIN or MAX "
-            "between consecutive OCR samples. Default: 2.5 C. "
-            "If primary OCR exceeds this, the same frame is retried "
-            "with alternate OCR methods. If all retries still fail, "
-            "the previous trusted scale is held."
+            "between consecutive OCR samples. Default: 2.5 C."
         ),
     )
 
     parser.add_argument(
         "--no-video",
         action="store_true",
-        help=(
-            "Calculate CSV temperatures without writing the processed MP4."
-        ),
+        help="Calculate CSV temperatures without writing the processed MP4.",
     )
 
     args = parser.parse_args()
 
-    video_path = Path(args.video)
-    regions_json_path = Path(args.regions_json)
-    scale_config_json_path = Path(args.scale_config_json)
+    video_path = Path(args.video).resolve()
+    regions_json_path = Path(args.regions_json).resolve()
+    scale_config_json_path = Path(args.scale_config_json).resolve()
 
-    # Keep the output hierarchy aligned with raw-videos.
-    #
-    # Example:
-    #   raw-videos/Furnace/video.mp4
-    #       ->
-    #   step-03-roi-videos/Furnace/video/
+    for required_path in (video_path, regions_json_path, scale_config_json_path):
+        if not required_path.is_file():
+            raise FileNotFoundError(required_path)
+
     output_dir = build_video_output_dir(
         video_path=video_path,
         output_root=args.output,
     )
 
-    output_dir.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+    print(f"\nStage-3 output folder:\n{output_dir}")
 
-    print(
-        f"\nStage-3 output folder:\n{output_dir}"
-    )
-
-    # If Tesseract is installed but not on PATH, the user can pass
-    # --tesseract with the executable location.
     if args.tesseract:
         pytesseract.pytesseract.tesseract_cmd = args.tesseract
 
@@ -2328,7 +2546,7 @@ def main():
     scale_config = load_json(scale_config_json_path)
 
     # --------------------------------------------------------
-    # Validate that video resolution matches saved configuration.
+    # Validate video metadata against both upstream files.
     # --------------------------------------------------------
     cap = cv2.VideoCapture(str(video_path))
 
@@ -2340,6 +2558,9 @@ def main():
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     cap.release()
+
+    if total_frames <= 0 or fps <= 0:
+        raise RuntimeError("Video reported invalid frame count/FPS.")
 
     ann_width = int(regions_data["video"]["width"])
     ann_height = int(regions_data["video"]["height"])
@@ -2362,58 +2583,65 @@ def main():
             f"Scale config : {cfg_width} x {cfg_height}"
         )
 
+    # --------------------------------------------------------
+    # Resolve frame range and OCR cadence BEFORE state comparison.
+    # These resolved values are the actual processing settings.
+    # --------------------------------------------------------
     start_frame = max(0, int(args.start_frame))
-    end_frame = args.end_frame
 
-    if end_frame is None:
+    if start_frame >= total_frames:
+        raise ValueError(
+            f"--start-frame {start_frame} is outside the video "
+            f"(last frame is {total_frames - 1})."
+        )
+
+    if args.end_frame is None:
         end_frame = total_frames - 1
+    else:
+        end_frame = min(int(args.end_frame), total_frames - 1)
 
     if args.max_frames is not None:
+        if int(args.max_frames) <= 0:
+            raise ValueError("--max-frames must be greater than 0.")
+
         end_frame = min(
-            int(end_frame),
+            end_frame,
             start_frame + int(args.max_frames) - 1,
         )
 
-    # --------------------------------------------------------
-    # Decide OCR cadence.
-    #
-    # IMPORTANT:
-    # OCR frequency and output-video FPS are separate things.
-    #
-    # Example at 25 FPS:
-    #   --ocr-hz 3
-    #       -> OCR approximately every 8 frames
-    #       -> temperature/polygon calculations still happen
-    #          on ALL 25 frames each second
-    #       -> output video remains 25 FPS and full duration
-    # --------------------------------------------------------
+    if end_frame < start_frame:
+        raise ValueError("end_frame must be >= start_frame")
 
     if args.ocr_every is not None:
-        ocr_every = max(
-            1,
-            int(args.ocr_every),
-        )
+        ocr_every = max(1, int(args.ocr_every))
     else:
-        if fps <= 0:
-            raise RuntimeError(
-                "Video reported invalid FPS, so --ocr-hz "
-                "cannot be converted to a frame interval."
-            )
-
         if float(args.ocr_hz) <= 0:
-            raise ValueError(
-                "--ocr-hz must be greater than 0."
-            )
+            raise ValueError("--ocr-hz must be greater than 0.")
 
         ocr_every = max(
             1,
             int(round(fps / float(args.ocr_hz))),
         )
 
-    effective_ocr_hz = (
-        fps / ocr_every
-        if fps > 0
-        else 0.0
+    effective_ocr_hz = fps / ocr_every
+
+    erode_pixels = max(0, int(args.erode))
+    max_channel_difference = max(0, int(args.max_channel_difference))
+    max_scale_jump = max(0.0, float(args.max_scale_jump))
+    write_video = not args.no_video
+
+    requested_settings = normalized_stage_03_settings(
+        ocr_every=ocr_every,
+        effective_ocr_hz=effective_ocr_hz,
+        start_frame=start_frame,
+        end_frame=end_frame,
+        erode_pixels=erode_pixels,
+        max_channel_difference=max_channel_difference,
+        min_allowed_temp=args.min_allowed_temp,
+        max_allowed_temp=args.max_allowed_temp,
+        min_scale_span=args.min_scale_span,
+        max_scale_jump=max_scale_jump,
+        write_video=write_video,
     )
 
     print(
@@ -2424,56 +2652,227 @@ def main():
 
     if args.max_frames is not None:
         test_frames = end_frame - start_frame + 1
-
-        test_duration = (
-            test_frames / fps
-            if fps > 0
-            else 0.0
-        )
+        test_duration = test_frames / fps
 
         print(
             "\nTEST MODE IS ACTIVE because --max-frames was supplied."
             f"\nOnly {test_frames} frames will be written."
-            f"\nExpected output duration: approximately "
-            f"{test_duration:.2f} seconds."
+            f"\nExpected output duration: approximately {test_duration:.2f} seconds."
             "\nRemove --max-frames for a full-length output video."
         )
 
     # --------------------------------------------------------
-    # PASS 1: dynamic scale OCR.
+    # CURRENT / STALE / LEGACY / PARTIAL / NEW classification.
     # --------------------------------------------------------
-    scale_scan = scan_dynamic_scale(
-        video_path=video_path,
-        scale_config=scale_config,
-        output_dir=output_dir,
-        start_frame=start_frame,
-        end_frame=end_frame,
-        ocr_every=ocr_every,
-        min_allowed=float(args.min_allowed_temp),
-        max_allowed=float(args.max_allowed_temp),
-        min_scale_span=float(args.min_scale_span),
-        max_jump=max(
-            0.0,
-            float(args.max_scale_jump),
-        ),
+    print("\nChecking Step-03 dependencies...")
+    current_source = ps.fingerprint_video(video_path)
+
+    upstream_warnings = upstream_tracking_warnings(
+        current_source=current_source,
+        regions_json_path=regions_json_path,
+        scale_config_json_path=scale_config_json_path,
     )
 
-    # --------------------------------------------------------
-    # PASS 2: per-pixel thermal conversion + ROI statistics.
-    # --------------------------------------------------------
-    process_video(
-        video_path=video_path,
-        regions_data=regions_data,
-        scale_config=scale_config,
-        scale_scan=scale_scan,
-        output_dir=output_dir,
-        erode_pixels=max(0, int(args.erode)),
-        max_channel_difference=max(
-            0,
-            int(args.max_channel_difference),
-        ),
-        write_video=not args.no_video,
+    manifest_path = output_dir / MANIFEST_FILENAME
+    manifest_file_present = ps.file_exists_and_nonempty(manifest_path)
+    tracked_complete = is_stage_03_tracked_complete(output_dir)
+    legacy_base_complete = (
+        is_stage_03_legacy_base_complete(output_dir)
+        and not manifest_file_present
     )
+    partial_output = (
+        ps.has_any_output(output_dir)
+        and not tracked_complete
+        and not legacy_base_complete
+    )
+
+    should_process = True
+
+    if tracked_complete:
+        existing_manifest = ps.load_manifest(manifest_path) or {}
+
+        stale_reasons = step_03_stale_reasons(
+            existing_manifest=existing_manifest,
+            current_source=current_source,
+            regions_json_path=regions_json_path,
+            scale_config_json_path=scale_config_json_path,
+            requested_settings=requested_settings,
+        )
+
+        if not stale_reasons:
+            print("\nSTEP 03 STATUS: CURRENT")
+            print("Existing output was generated using:")
+            print("  - Current raw video")
+            print("  - Current Step 01 annotations")
+            print("  - Current Step 02 OCR/scale configuration")
+            print("  - Same Step 03 processing settings")
+
+            if write_video:
+                print(
+                    f"Processed video: {output_dir / PROCESSED_VIDEO_FILENAME}"
+                )
+
+            should_process = ps.prompt_yes_no(
+                "Reprocess anyway?",
+                default=False,
+            )
+
+        else:
+            print("\nSTEP 03 STATUS: STALE")
+            print("The existing Step-03 output was made from older inputs/settings:")
+
+            for reason in stale_reasons:
+                print(f"  - {reason}")
+
+            should_process = ps.prompt_yes_no(
+                "Reprocess using the current inputs/settings?",
+                default=True,
+            )
+
+    elif legacy_base_complete:
+        print("\nSTEP 03 STATUS: LEGACY / UNTRACKED")
+        print(
+            "Existing Step-03 CSV output was found, but there is no "
+            "stage_03_manifest.json to prove which Step-01/Step-02 versions "
+            "created it."
+        )
+
+        should_process = ps.prompt_yes_no(
+            "Reprocess once to enable dependency tracking?",
+            default=False,
+        )
+
+    elif partial_output:
+        print("\nSTEP 03 STATUS: PARTIAL")
+        print("An incomplete Step-03 output folder exists.")
+
+        should_process = ps.prompt_yes_no(
+            "Restart Step 03 from the beginning?",
+            default=True,
+        )
+
+    else:
+        print("\nSTEP 03 STATUS: NEW")
+        should_process = ps.prompt_yes_no(
+            f'Process "{video_path.name}"?',
+            default=True,
+        )
+
+    if not should_process:
+        print("Skipped. Existing output was not changed.")
+        return
+
+    if upstream_warnings:
+        print("\nUPSTREAM TRACKING WARNING")
+        print(
+            "One or more supplied upstream files are not current according "
+            "to their own tracking manifests:"
+        )
+
+        for warning in upstream_warnings:
+            print(f"  - {warning}")
+
+        print(
+            "Recommended action: rerun the stale upstream stage before "
+            "creating a new Step-03 result."
+        )
+
+        if not ps.prompt_yes_no(
+            "Continue Step 03 with these upstream files anyway?",
+            default=False,
+        ):
+            print("Stopped before processing. Existing output was not changed.")
+            return
+
+    # --------------------------------------------------------
+    # Safe rerun: produce the complete new result in a sibling temp
+    # directory.  Only then replace the previous completed result.
+    # --------------------------------------------------------
+    working_dir = output_dir.with_name(output_dir.name + ".__processing__")
+
+    if working_dir.exists():
+        print(f"\nRemoving previous incomplete working folder:\n{working_dir}")
+        ps.safe_remove(working_dir)
+
+    working_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        # PASS 1: dynamic scale OCR.
+        scale_scan = scan_dynamic_scale(
+            video_path=video_path,
+            scale_config=scale_config,
+            output_dir=working_dir,
+            start_frame=start_frame,
+            end_frame=end_frame,
+            ocr_every=ocr_every,
+            min_allowed=float(args.min_allowed_temp),
+            max_allowed=float(args.max_allowed_temp),
+            min_scale_span=float(args.min_scale_span),
+            max_jump=max_scale_jump,
+        )
+
+        # PASS 2: per-pixel temperature conversion + ROI stats.
+        process_video(
+            video_path=video_path,
+            regions_data=regions_data,
+            scale_config=scale_config,
+            scale_scan=scale_scan,
+            output_dir=working_dir,
+            erode_pixels=erode_pixels,
+            max_channel_difference=max_channel_difference,
+            write_video=write_video,
+        )
+
+        if not ps.verify_required_files(
+            working_dir,
+            required_stage_03_files(write_video),
+        ):
+            raise RuntimeError(
+                "Step 03 finished but one or more required output files "
+                "are missing or empty."
+            )
+
+        manifest = build_stage_03_manifest(
+            video_path=video_path,
+            regions_json_path=regions_json_path,
+            scale_config_json_path=scale_config_json_path,
+            source_fingerprint=current_source,
+            settings=requested_settings,
+        )
+
+        ps.save_json_atomic(
+            working_dir / MANIFEST_FILENAME,
+            manifest,
+        )
+
+        if not is_stage_03_tracked_complete(working_dir):
+            raise RuntimeError("Tracked Step-03 completion validation failed.")
+
+        ps.promote_completed_directory(
+            working_dir=working_dir,
+            final_dir=output_dir,
+        )
+
+        print("\n============================================")
+        print("STEP 03 COMPLETED AND SAVED")
+        print("============================================")
+        print(output_dir)
+
+    except KeyboardInterrupt:
+        print(
+            "\n\nStep 03 interrupted. The previous completed output, if any, "
+            "was not replaced."
+            f"\nIncomplete new work is kept at:\n{working_dir}"
+        )
+        raise
+
+    except Exception:
+        print(
+            "\nStep 03 failed. The previous completed output, if any, "
+            "was not replaced."
+            f"\nIncomplete new work is kept at:\n{working_dir}"
+        )
+        raise
 
 
 if __name__ == "__main__":

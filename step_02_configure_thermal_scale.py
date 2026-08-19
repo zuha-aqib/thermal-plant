@@ -8,8 +8,18 @@ import cv2
 import numpy as np
 import pytesseract
 
+import step_code as ps
+
 # Default Stage-2 output root.
 DEFAULT_OUTPUT_ROOT = "step-02-ocr-scale-config"
+
+REQUIRED_BASE_FILES = (
+    "scale_config.json",
+    "scale_config.pkl",
+    "scale_config_preview.png",
+)
+
+MANIFEST_FILENAME = "stage_02_manifest.json"
 
 
 # ============================================================
@@ -62,6 +72,150 @@ def build_video_output_dir(video_path, output_root):
         relative_parent = Path()
 
     return output_root / relative_parent / video_path.stem
+
+
+# ============================================================
+# STAGE-2 STATE / PROVENANCE HELPERS
+# ============================================================
+
+def is_stage_02_base_complete(output_dir):
+    """Recognize both legacy and new completed Step-02 folders."""
+    return ps.verify_required_files(output_dir, REQUIRED_BASE_FILES)
+
+
+def is_stage_02_tracked_complete(output_dir):
+    """A tracked completion also has its provenance manifest."""
+    output_dir = Path(output_dir)
+    return (
+        is_stage_02_base_complete(output_dir)
+        and ps.file_exists_and_nonempty(output_dir / MANIFEST_FILENAME)
+    )
+
+
+def resolve_reference_frame(video_path, regions_data, frame_override):
+    """Resolve and clamp the exact reference frame Step 02 would use."""
+    requested = int(
+        regions_data.get("video", {}).get("reference_frame_number", 0)
+    )
+
+    if frame_override is not None:
+        requested = int(frame_override)
+
+    cap = cv2.VideoCapture(str(video_path))
+
+    if not cap.isOpened():
+        raise RuntimeError(f"Could not open video: {video_path}")
+
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+
+    if total_frames <= 0:
+        raise RuntimeError("Video reports zero frames.")
+
+    return max(0, min(requested, total_frames - 1))
+
+
+def build_stage_02_manifest(
+    video_path,
+    regions_json_path,
+    working_output_dir,
+    source_fingerprint,
+    effective_reference_frame,
+    min_allowed,
+    max_allowed,
+    min_scale_span,
+    ocr_padding,
+):
+    """Create a receipt for the exact inputs/settings behind Step 02."""
+    working_output_dir = Path(working_output_dir)
+    scale_config_path = working_output_dir / "scale_config.json"
+
+    return ps.make_manifest(
+        "step_02",
+        source_video=source_fingerprint,
+        inputs={
+            # The complete annotation hash is kept for audit only.
+            # It is intentionally NOT a staleness dependency because
+            # Step 02 only needs the reference frame from Step 01.
+            "regions_json_sha256_for_audit": ps.hash_json_file(
+                regions_json_path
+            ),
+            "reference_frame_number": int(effective_reference_frame),
+        },
+        settings={
+            "min_allowed_temp": float(min_allowed),
+            "max_allowed_temp": float(max_allowed),
+            "min_scale_span_c": float(min_scale_span),
+            "ocr_padding_pixels": int(ocr_padding),
+        },
+        outputs={
+            "scale_config_json_sha256": ps.hash_json_file(
+                scale_config_path
+            ),
+            "scale_config_pkl_filename": "scale_config.pkl",
+            "scale_config_preview_filename": "scale_config_preview.png",
+        },
+    )
+
+
+def step_02_stale_reasons(
+    existing_manifest,
+    output_dir,
+    current_source,
+    effective_reference_frame,
+    min_allowed,
+    max_allowed,
+    min_scale_span,
+    ocr_padding,
+):
+    """Return precise reasons an existing Step-02 configuration is stale."""
+    reasons = []
+
+    if not ps.same_file_content(
+        existing_manifest.get("source_video", {}),
+        current_source,
+    ):
+        reasons.append("Source/raw video content changed")
+
+    old_reference = existing_manifest.get("inputs", {}).get(
+        "reference_frame_number"
+    )
+
+    if old_reference != int(effective_reference_frame):
+        reasons.append(
+            f"Reference frame changed ({old_reference} -> {effective_reference_frame})"
+        )
+
+    requested_settings = {
+        "min_allowed_temp": float(min_allowed),
+        "max_allowed_temp": float(max_allowed),
+        "min_scale_span_c": float(min_scale_span),
+        "ocr_padding_pixels": int(ocr_padding),
+    }
+
+    old_settings = existing_manifest.get("settings", {})
+
+    for key, new_value in requested_settings.items():
+        old_value = old_settings.get(key)
+        if old_value != new_value:
+            reasons.append(
+                f"Step-02 setting '{key}' changed ({old_value} -> {new_value})"
+            )
+
+    # Detect manual edits/corruption of scale_config.json after completion.
+    scale_config_path = Path(output_dir) / "scale_config.json"
+    stored_hash = existing_manifest.get("outputs", {}).get(
+        "scale_config_json_sha256"
+    )
+
+    if ps.file_exists_and_nonempty(scale_config_path):
+        current_hash = ps.hash_json_file(scale_config_path)
+        if stored_hash != current_hash:
+            reasons.append(
+                "scale_config.json changed after the tracked Step-02 run"
+            )
+
+    return reasons
 
 
 # ============================================================
@@ -1057,9 +1211,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "video",
-        help=(
-            "Path to the ORIGINAL thermal video"
-        ),
+        help="Path to the ORIGINAL thermal video",
     )
 
     parser.add_argument(
@@ -1083,9 +1235,7 @@ if __name__ == "__main__":
         "--frame",
         type=int,
         default=None,
-        help=(
-            "Optional reference-frame override"
-        ),
+        help="Optional reference-frame override",
     )
 
     parser.add_argument(
@@ -1101,20 +1251,14 @@ if __name__ == "__main__":
         "--min-allowed-temp",
         type=float,
         default=-100.0,
-        help=(
-            "Reject reference OCR temperatures "
-            "below this value"
-        ),
+        help="Reject reference OCR temperatures below this value",
     )
 
     parser.add_argument(
         "--max-allowed-temp",
         type=float,
         default=1000.0,
-        help=(
-            "Reject reference OCR temperatures "
-            "above this value"
-        ),
+        help="Reject reference OCR temperatures above this value",
     )
 
     parser.add_argument(
@@ -1122,8 +1266,8 @@ if __name__ == "__main__":
         type=float,
         default=5.0,
         help=(
-            "Minimum plausible MAX-MIN scale "
-            "difference in degrees C. Default 5."
+            "Minimum plausible MAX-MIN scale difference in degrees C. "
+            "Default 5."
         ),
     )
 
@@ -1132,39 +1276,197 @@ if __name__ == "__main__":
         type=int,
         default=6,
         help=(
-            "Pixels automatically added around "
-            "the selected MAX/MIN text boxes. "
-            "Default 6."
+            "Pixels automatically added around the selected MAX/MIN "
+            "text boxes. Default 6."
         ),
     )
 
     args = parser.parse_args()
 
-    video_path = Path(args.video)
+    video_path = Path(args.video).resolve()
+    regions_json_path = Path(args.regions_json).resolve()
 
-    # Keep the output hierarchy aligned with raw-videos.
-    #
-    # Example:
-    #   raw-videos/Furnace/video.mp4
-    #       ->
-    #   step-02-ocr-scale-config/Furnace/video/
+    if not video_path.is_file():
+        raise FileNotFoundError(video_path)
+
+    if not regions_json_path.is_file():
+        raise FileNotFoundError(regions_json_path)
+
     output_dir = build_video_output_dir(
         video_path=video_path,
         output_root=args.output,
     )
 
-    print(
-        f"\nStage-2 output folder:\n{output_dir}"
+    print(f"\nStage-2 output folder:\n{output_dir}")
+
+    regions_data = ps.load_json(regions_json_path)
+    effective_reference_frame = resolve_reference_frame(
+        video_path=video_path,
+        regions_data=regions_data,
+        frame_override=args.frame,
     )
 
-    configure(
-        video_path=video_path,
-        regions_json_path=args.regions_json,
-        output_dir=output_dir,
-        frame_override=args.frame,
-        tesseract_path=args.tesseract,
-        min_allowed=args.min_allowed_temp,
-        max_allowed=args.max_allowed_temp,
-        min_scale_span=args.min_scale_span,
-        ocr_padding=args.ocr_padding,
-    )
+    # A real content hash means replacing the MP4 under the same name is
+    # still detected as a changed dependency.
+    print("\nChecking raw-video fingerprint...")
+    current_source = ps.fingerprint_video(video_path)
+
+    base_complete = is_stage_02_base_complete(output_dir)
+    tracked_complete = is_stage_02_tracked_complete(output_dir)
+    partial_output = ps.has_any_output(output_dir) and not base_complete
+
+    should_configure = True
+
+    if tracked_complete:
+        manifest = ps.load_manifest(output_dir / MANIFEST_FILENAME) or {}
+
+        reasons = step_02_stale_reasons(
+            existing_manifest=manifest,
+            output_dir=output_dir,
+            current_source=current_source,
+            effective_reference_frame=effective_reference_frame,
+            min_allowed=args.min_allowed_temp,
+            max_allowed=args.max_allowed_temp,
+            min_scale_span=args.min_scale_span,
+            ocr_padding=args.ocr_padding,
+        )
+
+        if not reasons:
+            config = ps.load_json(output_dir / "scale_config.json", default={})
+            scale = config.get("scale", {})
+
+            print("\nSTEP 02 STATUS: CURRENT")
+            print("This video already has a tracked OCR/scale configuration.")
+            print(f"  Reference frame : {effective_reference_frame}")
+            print(f"  Color bar ROI   : {scale.get('bar_roi')}")
+            print(f"  MAX text ROI    : {scale.get('max_text_roi')}")
+            print(f"  MIN text ROI    : {scale.get('min_text_roi')}")
+            print(
+                "  Reference scale : "
+                f"{scale.get('reference_ocr_min_temp')} C to "
+                f"{scale.get('reference_ocr_max_temp')} C"
+            )
+
+            should_configure = ps.prompt_yes_no(
+                "Redefine OCR/scale regions anyway?",
+                default=False,
+            )
+
+        else:
+            print("\nSTEP 02 STATUS: STALE")
+            print("The existing OCR/scale configuration is based on older inputs/settings:")
+            for reason in reasons:
+                print(f"  - {reason}")
+
+            should_configure = ps.prompt_yes_no(
+                "Reconfigure using the current inputs?",
+                default=True,
+            )
+
+    elif base_complete:
+        print("\nSTEP 02 STATUS: LEGACY / UNTRACKED")
+        print(
+            "A completed scale_config exists, but there is no "
+            "stage_02_manifest.json to prove which raw-video version/settings "
+            "created it."
+        )
+
+        should_configure = ps.prompt_yes_no(
+            "Redefine the OCR/scale regions to enable tracking?",
+            default=False,
+        )
+
+    elif partial_output:
+        print("\nSTEP 02 STATUS: PARTIAL")
+        print("An incomplete Step-02 folder exists.")
+
+        should_configure = ps.prompt_yes_no(
+            "Restart Step 02 from the beginning?",
+            default=True,
+        )
+
+    else:
+        print("\nSTEP 02 STATUS: NEW")
+        should_configure = ps.prompt_yes_no(
+            f'Configure "{video_path.name}"?',
+            default=True,
+        )
+
+    if not should_configure:
+        print("Skipped. Existing output was not changed.")
+        raise SystemExit(0)
+
+    # Build the new result beside the old one.  The old completed folder is
+    # not replaced until every new Step-02 file and manifest exist.
+    working_dir = output_dir.with_name(output_dir.name + ".__processing__")
+
+    if working_dir.exists():
+        print(f"\nRemoving previous incomplete working folder:\n{working_dir}")
+        ps.safe_remove(working_dir)
+
+    working_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        configure(
+            video_path=video_path,
+            regions_json_path=regions_json_path,
+            output_dir=working_dir,
+            frame_override=args.frame,
+            tesseract_path=args.tesseract,
+            min_allowed=args.min_allowed_temp,
+            max_allowed=args.max_allowed_temp,
+            min_scale_span=args.min_scale_span,
+            ocr_padding=args.ocr_padding,
+        )
+
+        if not is_stage_02_base_complete(working_dir):
+            raise RuntimeError(
+                "Step 02 finished but one or more required output files "
+                "are missing or empty."
+            )
+
+        manifest = build_stage_02_manifest(
+            video_path=video_path,
+            regions_json_path=regions_json_path,
+            working_output_dir=working_dir,
+            source_fingerprint=current_source,
+            effective_reference_frame=effective_reference_frame,
+            min_allowed=args.min_allowed_temp,
+            max_allowed=args.max_allowed_temp,
+            min_scale_span=args.min_scale_span,
+            ocr_padding=args.ocr_padding,
+        )
+
+        ps.save_json_atomic(
+            working_dir / MANIFEST_FILENAME,
+            manifest,
+        )
+
+        if not is_stage_02_tracked_complete(working_dir):
+            raise RuntimeError("Tracked Step-02 completion validation failed.")
+
+        ps.promote_completed_directory(
+            working_dir=working_dir,
+            final_dir=output_dir,
+        )
+
+        print("\n============================================")
+        print("STEP 02 COMPLETED AND SAVED")
+        print("============================================")
+        print(output_dir)
+
+    except KeyboardInterrupt:
+        print(
+            "\n\nStep 02 interrupted. The previous completed output, if any, "
+            "was not replaced."
+            f"\nIncomplete new work is kept at:\n{working_dir}"
+        )
+        raise
+
+    except Exception:
+        print(
+            "\nStep 02 failed. The previous completed output, if any, "
+            "was not replaced."
+            f"\nIncomplete new work is kept at:\n{working_dir}"
+        )
+        raise
