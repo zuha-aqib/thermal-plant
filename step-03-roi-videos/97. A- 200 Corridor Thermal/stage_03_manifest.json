@@ -1,0 +1,38 @@
+{
+    "manifest_version": 1,
+    "stage": "step_03",
+    "status": "completed",
+    "created_at_utc": "2026-08-19T15:04:34+00:00",
+    "source_video": {
+        "path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\raw-videos\\97. A- 200 Corridor Thermal.mp4",
+        "filename": "97. A- 200 Corridor Thermal.mp4",
+        "size_bytes": 84387218,
+        "mtime_ns": 1786952598167334200,
+        "sha256": "7759c4cfe74d066c4ea2f293880c9df2ed99c7039a7ba5c6f32cbe4885b4c1e1"
+    },
+    "inputs": {
+        "regions_json_path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\step-01-annotate-videos\\97. A- 200 Corridor Thermal\\regions.json",
+        "regions_json_sha256": "d872687dc01a719ab8ec478b92daf5bd4845be87c9a4afc55657a8f7945b6080",
+        "scale_config_json_path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\step-02-ocr-scale-config\\97. A- 200 Corridor Thermal\\scale_config.json",
+        "scale_config_json_sha256": "dda0b76c8f2e29d4431cd688e8c8dd2196f652a256696848180c0ee30543da7b"
+    },
+    "settings": {
+        "ocr_every_frames": 8,
+        "effective_ocr_hz": 3.0849504292104943,
+        "start_frame": 0,
+        "end_frame": 8164,
+        "erode_pixels": 0,
+        "max_channel_difference": 18,
+        "min_allowed_temp": -100.0,
+        "max_allowed_temp": 1000.0,
+        "min_scale_span_c": 5.0,
+        "max_scale_jump_c": 2.0,
+        "write_video": true
+    },
+    "outputs": {
+        "scale_readings_csv": "scale_readings.csv",
+        "temperature_log_csv": "temperature_log.csv",
+        "temperature_summary_csv": "temperature_summary.csv",
+        "processed_video": "thermal_temperature_output.mp4"
+    }
+}
