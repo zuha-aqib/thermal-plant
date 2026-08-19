@@ -11,20 +11,20 @@
         "bar_roi": [
             1186,
             234,
-            33,
-            470
+            34,
+            471
         ],
         "max_text_roi": [
-            1089,
-            164,
-            130,
-            59
+            1095,
+            174,
+            121,
+            48
         ],
         "min_text_roi": [
-            1102,
-            694,
-            112,
-            41
+            1095,
+            693,
+            123,
+            44
         ],
         "bar_horizontal_inner_fraction": 0.2,
         "display_decimal_places": 1,

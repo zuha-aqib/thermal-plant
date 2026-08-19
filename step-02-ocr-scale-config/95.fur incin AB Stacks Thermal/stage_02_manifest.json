@@ -1,0 +1,28 @@
+{
+    "manifest_version": 1,
+    "stage": "step_02",
+    "status": "completed",
+    "created_at_utc": "2026-08-19T12:44:25+00:00",
+    "source_video": {
+        "path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\raw-videos\\95.fur incin AB Stacks Thermal.mp4",
+        "filename": "95.fur incin AB Stacks Thermal.mp4",
+        "size_bytes": 76721052,
+        "mtime_ns": 1786605117475391400,
+        "sha256": "d8b5ba7a3350ef522cf76bd896f5da1ff66b9d1cb2d1cee7e9445d22899a7ef5"
+    },
+    "inputs": {
+        "regions_json_sha256_for_audit": "bd311b95d944ad96bf4cf5e92c4343e1c4f22be6f0d0b275d76bc53d1ce23c44",
+        "reference_frame_number": 0
+    },
+    "settings": {
+        "min_allowed_temp": -100.0,
+        "max_allowed_temp": 1000.0,
+        "min_scale_span_c": 5.0,
+        "ocr_padding_pixels": 6
+    },
+    "outputs": {
+        "scale_config_json_sha256": "940738d7e71409451d69af81de7a06355b4817d54ea46af3c1ea760a96627c38",
+        "scale_config_pkl_filename": "scale_config.pkl",
+        "scale_config_preview_filename": "scale_config_preview.png"
+    }
+}
