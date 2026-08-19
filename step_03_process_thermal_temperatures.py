@@ -11,7 +11,7 @@ import numpy as np
 import pytesseract
 
 # Default Stage-3 output root.
-DEFAULT_OUTPUT_ROOT = "step03-roi-videos"
+DEFAULT_OUTPUT_ROOT = "step-03-roi-videos"
 
 
 # ============================================================
@@ -930,7 +930,7 @@ def scan_dynamic_scale(
 
     invalid_debug_dir = (
         output_dir
-        / "ocr_debug_rejected"
+        / "ocr-debug-rejected"
     )
 
     invalid_debug_dir.mkdir(
@@ -2304,7 +2304,7 @@ def main():
     # Example:
     #   raw-videos/Furnace/video.mp4
     #       ->
-    #   step03-roi-videos/Furnace/video/
+    #   step-03-roi-videos/Furnace/video/
     output_dir = build_video_output_dir(
         video_path=video_path,
         output_root=args.output,

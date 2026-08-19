@@ -41,7 +41,7 @@ LINE_THICKNESS = 2
 #
 # becomes:
 #
-#   step01-annotate-videos/
+#   step-01-annotate-videos/
 #       95.fur incin AB Stacks Thermal/
 #           regions.json
 #           regions.pkl
@@ -49,7 +49,7 @@ LINE_THICKNESS = 2
 #           annotated_reference_frame.png
 #           annotated_video.mp4
 #
-DEFAULT_OUTPUT_ROOT = "step01-annotate-videos"
+DEFAULT_OUTPUT_ROOT = "step-01-annotate-videos"
 
 # A video is considered "already parsed" only when BOTH
 # coordinate files and the final annotated video are present
@@ -147,7 +147,7 @@ def find_raw_videos_ancestor(video_path):
 
     becomes:
 
-        step01-annotate-videos/Area-A/Camera-01/video/
+        step-01-annotate-videos/Area-A/Camera-01/video/
     """
 
     for parent in video_path.parents:
@@ -168,14 +168,14 @@ def build_output_dir(video_path, input_path, output_root):
 
         raw-videos/Area-A/Camera-01/video.mp4
             ->
-        step01-annotate-videos/Area-A/Camera-01/video/
+        step-01-annotate-videos/Area-A/Camera-01/video/
 
     Single-file input:
         If the video is somewhere under a folder named raw-videos,
         preserve the folders below raw-videos.
 
         Otherwise:
-            step01-annotate-videos/video/
+            step-01-annotate-videos/video/
     """
 
     video_path = Path(video_path).resolve()

@@ -9,7 +9,7 @@ import numpy as np
 import pytesseract
 
 # Default Stage-2 output root.
-DEFAULT_OUTPUT_ROOT = "step02-ocr-scale-config"
+DEFAULT_OUTPUT_ROOT = "step-02-ocr-scale-config"
 
 
 # ============================================================
@@ -552,7 +552,7 @@ def save_ocr_diagnostics(
     """
     debug_dir = (
         Path(output_dir)
-        / "ocr_config_debug"
+        / "ocr-config-debug"
     )
 
     debug_dir.mkdir(
@@ -1147,7 +1147,7 @@ if __name__ == "__main__":
     # Example:
     #   raw-videos/Furnace/video.mp4
     #       ->
-    #   step02-ocr-scale-config/Furnace/video/
+    #   step-02-ocr-scale-config/Furnace/video/
     output_dir = build_video_output_dir(
         video_path=video_path,
         output_root=args.output,
