@@ -650,7 +650,7 @@
 │       └── regions.pkl
 ├── step02-ocr-scale-config
 │   ├── 95.fur incin AB Stacks Thermal
-│   │   ├── ocr_config_debug
+│   │   ├── ocr-config-debug
 │   │   │   ├── MAX_01_green_difference_psm7.png
 │   │   │   ├── MAX_02_green_difference_psm8.png
 │   │   │   ├── MAX_03_hsv_green_psm7.png
@@ -669,7 +669,7 @@
 │   │   ├── scale_config.pkl
 │   │   └── scale_config_preview.png
 │   └── 97. A- 200 Corridor Thermal
-│       ├── ocr_config_debug
+│       ├── ocr-config-debug
 │       │   ├── MAX_01_green_difference_psm7.png
 │       │   ├── MAX_02_green_difference_psm8.png
 │       │   ├── MAX_03_hsv_green_psm7.png
@@ -689,7 +689,7 @@
 │       └── scale_config_preview.png
 ├── step03-roi-videos
 │   ├── 95.fur incin AB Stacks Thermal
-│   │   ├── ocr_debug_rejected
+│   │   ├── ocr-debug-rejected
 │   │   │   ├── frame_000008_ORIGINAL_MAX.png
 │   │   │   ├── frame_000008_ORIGINAL_MIN.png
 │   │   │   ├── frame_000008_PRIMARY_MAX.png
@@ -815,7 +815,7 @@
 │   │   ├── temperature_summary.csv
 │   │   └── thermal_temperature_output.mp4
 │   └── 97. A- 200 Corridor Thermal
-│       ├── ocr_debug_rejected
+│       ├── ocr-debug-rejected
 │       │   ├── frame_000024_ORIGINAL_MAX.png
 │       │   ├── frame_000024_ORIGINAL_MIN.png
 │       │   ├── frame_000024_PRIMARY_MAX.png
@@ -946,14 +946,13 @@
 │   ├── 95.fur incin AB Stacks Thermal.mp4
 │   └── 97. A- 200 Corridor Thermal.mp4
 ├── .gitignore
-├── annotate_thermal_video.py
-├── build_phase_c_dataset_v0.py
-├── commands_to_run.md
-├── configure_thermal_scale.py
-├── folder_structure.txt
 ├── phase_a_accidental_camera_motion.py
 ├── phase_b_scene_change_detector.py
+├── phase_c_build_dataset_v1.py
 ├── phase_c_dataset_config.json
-├── process_thermal_temperatures.py
 ├── simulate_accidental_camera_movement.py
-└── simulate_incidental_camera_movement.py
+├── simulate_incidental_camera_movement.py
+├── step_commands_to_run.md
+├── step01_annotate_thermal_video.py
+├── step02_configure_thermal_scale.py
+└── step03_process_thermal_temperatures.py
