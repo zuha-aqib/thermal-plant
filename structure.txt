@@ -1,22 +1,45 @@
 ﻿thermal-plant/
 ├── phase-a-accidental-camera-motion
-│   └── 95.fur incin AB Stacks Thermal
-│       ├── motion_compensated_video.mp4
-│       ├── motion_log.csv
-│       ├── motion_summary.json
-│       ├── tracked_regions.json
-│       └── tracked_regions.pkl
+│   ├── 95.fur incin AB Stacks Thermal
+│   │   └── accidental_001
+│   │       ├── motion_compensated_video.mp4
+│   │       ├── motion_log.csv
+│   │       ├── motion_summary.json
+│   │       ├── phase_a_manifest.json
+│   │       ├── tracked_regions.json
+│   │       └── tracked_regions.pkl
+│   └── 97. A- 200 Corridor Thermal
+│       └── accidental_001
+│           ├── motion_compensated_video.mp4
+│           ├── motion_log.csv
+│           ├── motion_summary.json
+│           ├── phase_a_manifest.json
+│           ├── tracked_regions.json
+│           └── tracked_regions.pkl
 ├── phase-b-scene-change-detection
-│   └── 97. A- 200 Corridor Thermal__TO__95.fur incin AB Stacks Thermal__phase_b_test
-│       ├── view-library
-│       │   ├── VIEW_001_reference.png
-│       │   └── VIEW_002_reference.png
-│       ├── scene_events.csv
-│       ├── scene_state_log.csv
-│       ├── scene_state_video.mp4
-│       ├── scene_summary.json
-│       └── view_library.json
-├── phase-c-dataset-v0
+│   ├── 95.fur incin AB Stacks Thermal__TO__97. A- 200 Corridor Thermal
+│   │   └── incidental_001
+│   │       ├── view-library
+│   │       │   ├── VIEW_001_reference.png
+│   │       │   └── VIEW_002_reference.png
+│   │       ├── phase_b_manifest.json
+│   │       ├── scene_events.csv
+│   │       ├── scene_state_log.csv
+│   │       ├── scene_state_video.mp4
+│   │       ├── scene_summary.json
+│   │       └── view_library.json
+│   └── 97. A- 200 Corridor Thermal__TO__95.fur incin AB Stacks Thermal
+│       └── incidental_001
+│           ├── view-library
+│           │   ├── VIEW_001_reference.png
+│           │   └── VIEW_002_reference.png
+│           ├── phase_b_manifest.json
+│           ├── scene_events.csv
+│           ├── scene_state_log.csv
+│           ├── scene_state_video.mp4
+│           ├── scene_summary.json
+│           └── view_library.json
+├── phase-c-dataset
 │   ├── annotations
 │   │   └── instances_all.json
 │   ├── images
@@ -635,20 +658,22 @@
 │   ├── 94.fur incin AB Stacks.mp4
 │   ├── 95.fur incin AB Stacks Thermal.mp4
 │   └── 97. A- 200 Corridor Thermal.mp4
-├── step01-annotate-videos
+├── step-01-annotate-videos
 │   ├── 95.fur incin AB Stacks Thermal
 │   │   ├── annotated_reference_frame.png
 │   │   ├── annotated_video.mp4
 │   │   ├── reference_frame.png
 │   │   ├── regions.json
-│   │   └── regions.pkl
+│   │   ├── regions.pkl
+│   │   └── stage_01_manifest.json
 │   └── 97. A- 200 Corridor Thermal
 │       ├── annotated_reference_frame.png
 │       ├── annotated_video.mp4
 │       ├── reference_frame.png
 │       ├── regions.json
-│       └── regions.pkl
-├── step02-ocr-scale-config
+│       ├── regions.pkl
+│       └── stage_01_manifest.json
+├── step-02-ocr-scale-config
 │   ├── 95.fur incin AB Stacks Thermal
 │   │   ├── ocr-config-debug
 │   │   │   ├── MAX_01_green_difference_psm7.png
@@ -667,7 +692,8 @@
 │   │   │   └── MIN_original_crop.png
 │   │   ├── scale_config.json
 │   │   ├── scale_config.pkl
-│   │   └── scale_config_preview.png
+│   │   ├── scale_config_preview.png
+│   │   └── stage_02_manifest.json
 │   └── 97. A- 200 Corridor Thermal
 │       ├── ocr-config-debug
 │       │   ├── MAX_01_green_difference_psm7.png
@@ -686,8 +712,9 @@
 │       │   └── MIN_original_crop.png
 │       ├── scale_config.json
 │       ├── scale_config.pkl
-│       └── scale_config_preview.png
-├── step03-roi-videos
+│       ├── scale_config_preview.png
+│       └── stage_02_manifest.json
+├── step-03-roi-videos
 │   ├── 95.fur incin AB Stacks Thermal
 │   │   ├── ocr-debug-rejected
 │   │   │   ├── frame_000008_ORIGINAL_MAX.png
@@ -798,60 +825,41 @@
 │   │   │   ├── frame_000464_ORIGINAL_MIN.png
 │   │   │   ├── frame_000464_PRIMARY_MAX.png
 │   │   │   ├── frame_000464_PRIMARY_MIN.png
-│   │   │   ├── frame_000472_ORIGINAL_MAX.png
-│   │   │   ├── frame_000472_ORIGINAL_MIN.png
-│   │   │   ├── frame_000472_PRIMARY_MAX.png
-│   │   │   ├── frame_000472_PRIMARY_MIN.png
-│   │   │   ├── frame_000592_ORIGINAL_MAX.png
-│   │   │   ├── frame_000592_ORIGINAL_MIN.png
-│   │   │   ├── frame_000592_PRIMARY_MAX.png
-│   │   │   ├── frame_000592_PRIMARY_MIN.png
 │   │   │   ├── frame_000616_ORIGINAL_MAX.png
 │   │   │   ├── frame_000616_ORIGINAL_MIN.png
 │   │   │   ├── frame_000616_PRIMARY_MAX.png
-│   │   │   └── frame_000616_PRIMARY_MIN.png
+│   │   │   ├── frame_000616_PRIMARY_MIN.png
+│   │   │   ├── frame_000680_ORIGINAL_MAX.png
+│   │   │   ├── frame_000680_ORIGINAL_MIN.png
+│   │   │   ├── frame_000680_PRIMARY_MAX.png
+│   │   │   ├── frame_000680_PRIMARY_MIN.png
+│   │   │   ├── frame_000704_ORIGINAL_MAX.png
+│   │   │   ├── frame_000704_ORIGINAL_MIN.png
+│   │   │   ├── frame_000704_PRIMARY_MAX.png
+│   │   │   └── frame_000704_PRIMARY_MIN.png
 │   │   ├── scale_readings.csv
+│   │   ├── stage_03_manifest.json
 │   │   ├── temperature_log.csv
 │   │   ├── temperature_summary.csv
 │   │   └── thermal_temperature_output.mp4
 │   └── 97. A- 200 Corridor Thermal
 │       ├── ocr-debug-rejected
-│       │   ├── frame_000024_ORIGINAL_MAX.png
-│       │   ├── frame_000024_ORIGINAL_MIN.png
-│       │   ├── frame_000024_PRIMARY_MAX.png
-│       │   ├── frame_000024_PRIMARY_MIN.png
-│       │   ├── frame_000032_ORIGINAL_MAX.png
-│       │   ├── frame_000032_ORIGINAL_MIN.png
-│       │   ├── frame_000032_PRIMARY_MAX.png
-│       │   ├── frame_000032_PRIMARY_MIN.png
+│       │   ├── frame_000008_ORIGINAL_MAX.png
+│       │   ├── frame_000008_ORIGINAL_MIN.png
+│       │   ├── frame_000008_PRIMARY_MAX.png
+│       │   ├── frame_000008_PRIMARY_MIN.png
+│       │   ├── frame_000016_ORIGINAL_MAX.png
+│       │   ├── frame_000016_ORIGINAL_MIN.png
+│       │   ├── frame_000016_PRIMARY_MAX.png
+│       │   ├── frame_000016_PRIMARY_MIN.png
 │       │   ├── frame_000040_ORIGINAL_MAX.png
 │       │   ├── frame_000040_ORIGINAL_MIN.png
 │       │   ├── frame_000040_PRIMARY_MAX.png
 │       │   ├── frame_000040_PRIMARY_MIN.png
-│       │   ├── frame_000056_ORIGINAL_MAX.png
-│       │   ├── frame_000056_ORIGINAL_MIN.png
-│       │   ├── frame_000056_PRIMARY_MAX.png
-│       │   ├── frame_000056_PRIMARY_MIN.png
 │       │   ├── frame_000064_ORIGINAL_MAX.png
 │       │   ├── frame_000064_ORIGINAL_MIN.png
 │       │   ├── frame_000064_PRIMARY_MAX.png
 │       │   ├── frame_000064_PRIMARY_MIN.png
-│       │   ├── frame_000072_ORIGINAL_MAX.png
-│       │   ├── frame_000072_ORIGINAL_MIN.png
-│       │   ├── frame_000072_PRIMARY_MAX.png
-│       │   ├── frame_000072_PRIMARY_MIN.png
-│       │   ├── frame_000080_ORIGINAL_MAX.png
-│       │   ├── frame_000080_ORIGINAL_MIN.png
-│       │   ├── frame_000080_PRIMARY_MAX.png
-│       │   ├── frame_000080_PRIMARY_MIN.png
-│       │   ├── frame_000088_ORIGINAL_MAX.png
-│       │   ├── frame_000088_ORIGINAL_MIN.png
-│       │   ├── frame_000088_PRIMARY_MAX.png
-│       │   ├── frame_000088_PRIMARY_MIN.png
-│       │   ├── frame_000096_ORIGINAL_MAX.png
-│       │   ├── frame_000096_ORIGINAL_MIN.png
-│       │   ├── frame_000096_PRIMARY_MAX.png
-│       │   ├── frame_000096_PRIMARY_MIN.png
 │       │   ├── frame_000104_ORIGINAL_MAX.png
 │       │   ├── frame_000104_ORIGINAL_MIN.png
 │       │   ├── frame_000104_PRIMARY_MAX.png
@@ -876,22 +884,14 @@
 │       │   ├── frame_000144_ORIGINAL_MIN.png
 │       │   ├── frame_000144_PRIMARY_MAX.png
 │       │   ├── frame_000144_PRIMARY_MIN.png
-│       │   ├── frame_000160_ORIGINAL_MAX.png
-│       │   ├── frame_000160_ORIGINAL_MIN.png
-│       │   ├── frame_000160_PRIMARY_MAX.png
-│       │   ├── frame_000160_PRIMARY_MIN.png
+│       │   ├── frame_000152_ORIGINAL_MAX.png
+│       │   ├── frame_000152_ORIGINAL_MIN.png
+│       │   ├── frame_000152_PRIMARY_MAX.png
+│       │   ├── frame_000152_PRIMARY_MIN.png
 │       │   ├── frame_000168_ORIGINAL_MAX.png
 │       │   ├── frame_000168_ORIGINAL_MIN.png
 │       │   ├── frame_000168_PRIMARY_MAX.png
 │       │   ├── frame_000168_PRIMARY_MIN.png
-│       │   ├── frame_000176_ORIGINAL_MAX.png
-│       │   ├── frame_000176_ORIGINAL_MIN.png
-│       │   ├── frame_000176_PRIMARY_MAX.png
-│       │   ├── frame_000176_PRIMARY_MIN.png
-│       │   ├── frame_000184_ORIGINAL_MAX.png
-│       │   ├── frame_000184_ORIGINAL_MIN.png
-│       │   ├── frame_000184_PRIMARY_MAX.png
-│       │   ├── frame_000184_PRIMARY_MIN.png
 │       │   ├── frame_000192_ORIGINAL_MAX.png
 │       │   ├── frame_000192_ORIGINAL_MIN.png
 │       │   ├── frame_000192_PRIMARY_MAX.png
@@ -900,18 +900,6 @@
 │       │   ├── frame_000200_ORIGINAL_MIN.png
 │       │   ├── frame_000200_PRIMARY_MAX.png
 │       │   ├── frame_000200_PRIMARY_MIN.png
-│       │   ├── frame_000208_ORIGINAL_MAX.png
-│       │   ├── frame_000208_ORIGINAL_MIN.png
-│       │   ├── frame_000208_PRIMARY_MAX.png
-│       │   ├── frame_000208_PRIMARY_MIN.png
-│       │   ├── frame_000216_ORIGINAL_MAX.png
-│       │   ├── frame_000216_ORIGINAL_MIN.png
-│       │   ├── frame_000216_PRIMARY_MAX.png
-│       │   ├── frame_000216_PRIMARY_MIN.png
-│       │   ├── frame_000224_ORIGINAL_MAX.png
-│       │   ├── frame_000224_ORIGINAL_MIN.png
-│       │   ├── frame_000224_PRIMARY_MAX.png
-│       │   ├── frame_000224_PRIMARY_MIN.png
 │       │   ├── frame_000240_ORIGINAL_MAX.png
 │       │   ├── frame_000240_ORIGINAL_MIN.png
 │       │   ├── frame_000240_PRIMARY_MAX.png
@@ -924,6 +912,10 @@
 │       │   ├── frame_000256_ORIGINAL_MIN.png
 │       │   ├── frame_000256_PRIMARY_MAX.png
 │       │   ├── frame_000256_PRIMARY_MIN.png
+│       │   ├── frame_000264_ORIGINAL_MAX.png
+│       │   ├── frame_000264_ORIGINAL_MIN.png
+│       │   ├── frame_000264_PRIMARY_MAX.png
+│       │   ├── frame_000264_PRIMARY_MIN.png
 │       │   ├── frame_000272_ORIGINAL_MAX.png
 │       │   ├── frame_000272_ORIGINAL_MIN.png
 │       │   ├── frame_000272_PRIMARY_MAX.png
@@ -935,24 +927,72 @@
 │       │   ├── frame_000288_ORIGINAL_MAX.png
 │       │   ├── frame_000288_ORIGINAL_MIN.png
 │       │   ├── frame_000288_PRIMARY_MAX.png
-│       │   └── frame_000288_PRIMARY_MIN.png
+│       │   ├── frame_000288_PRIMARY_MIN.png
+│       │   ├── frame_000296_ORIGINAL_MAX.png
+│       │   ├── frame_000296_ORIGINAL_MIN.png
+│       │   ├── frame_000296_PRIMARY_MAX.png
+│       │   ├── frame_000296_PRIMARY_MIN.png
+│       │   ├── frame_000304_ORIGINAL_MAX.png
+│       │   ├── frame_000304_ORIGINAL_MIN.png
+│       │   ├── frame_000304_PRIMARY_MAX.png
+│       │   ├── frame_000304_PRIMARY_MIN.png
+│       │   ├── frame_000312_ORIGINAL_MAX.png
+│       │   ├── frame_000312_ORIGINAL_MIN.png
+│       │   ├── frame_000312_PRIMARY_MAX.png
+│       │   ├── frame_000312_PRIMARY_MIN.png
+│       │   ├── frame_000344_ORIGINAL_MAX.png
+│       │   ├── frame_000344_ORIGINAL_MIN.png
+│       │   ├── frame_000344_PRIMARY_MAX.png
+│       │   ├── frame_000344_PRIMARY_MIN.png
+│       │   ├── frame_000352_ORIGINAL_MAX.png
+│       │   ├── frame_000352_ORIGINAL_MIN.png
+│       │   ├── frame_000352_PRIMARY_MAX.png
+│       │   ├── frame_000352_PRIMARY_MIN.png
+│       │   ├── frame_000360_ORIGINAL_MAX.png
+│       │   ├── frame_000360_ORIGINAL_MIN.png
+│       │   ├── frame_000360_PRIMARY_MAX.png
+│       │   ├── frame_000360_PRIMARY_MIN.png
+│       │   ├── frame_000368_ORIGINAL_MAX.png
+│       │   ├── frame_000368_ORIGINAL_MIN.png
+│       │   ├── frame_000368_PRIMARY_MAX.png
+│       │   ├── frame_000368_PRIMARY_MIN.png
+│       │   ├── frame_000384_ORIGINAL_MAX.png
+│       │   ├── frame_000384_ORIGINAL_MIN.png
+│       │   ├── frame_000384_PRIMARY_MAX.png
+│       │   ├── frame_000384_PRIMARY_MIN.png
+│       │   ├── frame_000392_ORIGINAL_MAX.png
+│       │   ├── frame_000392_ORIGINAL_MIN.png
+│       │   ├── frame_000392_PRIMARY_MAX.png
+│       │   └── frame_000392_PRIMARY_MIN.png
 │       ├── scale_readings.csv
+│       ├── stage_03_manifest.json
 │       ├── temperature_log.csv
 │       ├── temperature_summary.csv
 │       └── thermal_temperature_output.mp4
 ├── synthetic-incidental-videos
-│   └── 97. A- 200 Corridor Thermal__TO__95.fur incin AB Stacks Thermal__phase_b_test.mp4
+│   ├── 95.fur incin AB Stacks Thermal__TO__97. A- 200 Corridor Thermal
+│   │   ├── incidental_001.mp4
+│   │   └── transformations.json
+│   └── 97. A- 200 Corridor Thermal__TO__95.fur incin AB Stacks Thermal
+│       ├── incidental_001.mp4
+│       └── transformations.json
 ├── synthetic-moved-videos
-│   ├── 95.fur incin AB Stacks Thermal.mp4
-│   └── 97. A- 200 Corridor Thermal.mp4
+│   ├── 95.fur incin AB Stacks Thermal
+│   │   ├── accidental_001.mp4
+│   │   └── transformations.json
+│   └── 97. A- 200 Corridor Thermal
+│       ├── accidental_001.mp4
+│       └── transformations.json
 ├── .gitignore
 ├── phase_a_accidental_camera_motion.py
 ├── phase_b_scene_change_detector.py
-├── phase_c_build_dataset_v1.py
+├── phase_c_build_dataset.py
 ├── phase_c_dataset_config.json
+├── phase_commands_to_run.md
 ├── simulate_accidental_camera_movement.py
 ├── simulate_incidental_camera_movement.py
-├── step_commands_to_run.md
-├── step01_annotate_thermal_video.py
-├── step02_configure_thermal_scale.py
-└── step03_process_thermal_temperatures.py
+├── step_01_annotate_thermal_video.py
+├── step_02_configure_thermal_scale.py
+├── step_03_process_thermal_temperatures.py
+├── step_code.py
+└── step_commands_to_run.md
