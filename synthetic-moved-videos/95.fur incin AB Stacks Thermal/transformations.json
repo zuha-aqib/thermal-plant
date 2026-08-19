@@ -1,0 +1,36 @@
+{
+    "manifest_version": 1,
+    "generator": "synthetic_accidental_camera_movement",
+    "source_video_name": "95.fur incin AB Stacks Thermal.mp4",
+    "variants": [
+        {
+            "id": "accidental_001",
+            "signature": "89b538a5a01fff9e",
+            "created_at_utc": "2026-08-19T13:01:53+00:00",
+            "output_filename": "accidental_001.mp4",
+            "source_video": {
+                "path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\raw-videos\\95.fur incin AB Stacks Thermal.mp4",
+                "filename": "95.fur incin AB Stacks Thermal.mp4",
+                "size_bytes": 76721052,
+                "mtime_ns": 1786605117475391400,
+                "sha256": "d8b5ba7a3350ef522cf76bd896f5da1ff66b9d1cb2d1cee7e9445d22899a7ef5"
+            },
+            "parameters": {
+                "move_at_seconds": 4.0,
+                "dx_pixels": 20.0,
+                "dy_pixels": -10.0,
+                "rotation_degrees": 1.0,
+                "scale": 1.0,
+                "transition_frames": 4
+            },
+            "output": {
+                "path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\synthetic-moved-videos\\95.fur incin AB Stacks Thermal\\accidental_001.mp4",
+                "filename": "accidental_001.mp4",
+                "size_bytes": 76018164,
+                "mtime_ns": 1787144513031729000,
+                "sha256": "dbd5085048cd81a6ca4cb9398c4b6075967850d89039b5d3466858fe11344806"
+            }
+        }
+    ],
+    "last_updated_utc": "2026-08-19T13:01:53+00:00"
+}
