@@ -1,0 +1,959 @@
+﻿thermal-plant/
+├── phase-a-accidental-camera-motion
+│   └── 95.fur incin AB Stacks Thermal
+│       ├── motion_compensated_video.mp4
+│       ├── motion_log.csv
+│       ├── motion_summary.json
+│       ├── tracked_regions.json
+│       └── tracked_regions.pkl
+├── phase-b-scene-change-detection
+│   └── 97. A- 200 Corridor Thermal__TO__95.fur incin AB Stacks Thermal__phase_b_test
+│       ├── view-library
+│       │   ├── VIEW_001_reference.png
+│       │   └── VIEW_002_reference.png
+│       ├── scene_events.csv
+│       ├── scene_state_log.csv
+│       ├── scene_state_video.mp4
+│       ├── scene_summary.json
+│       └── view_library.json
+├── phase-c-dataset-v0
+│   ├── annotations
+│   │   └── instances_all.json
+│   ├── images
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000000__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000000__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000000__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000122__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000122__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000122__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000244__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000244__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000244__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000366__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000366__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000366__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000488__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000488__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000488__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000610__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000610__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000610__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000732__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000732__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000732__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000854__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000854__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000854__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000976__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000976__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_000976__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001098__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001098__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001098__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001220__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001220__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001220__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001342__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001342__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001342__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001464__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001464__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001464__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001586__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001586__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001586__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001708__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001708__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001708__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001830__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001830__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001830__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001952__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001952__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_001952__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002074__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002074__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002074__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002196__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002196__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002196__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002318__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002318__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002318__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002440__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002440__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002440__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002562__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002562__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002562__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002684__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002684__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002684__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002806__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002806__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002806__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002928__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002928__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_002928__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003050__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003050__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003050__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003172__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003172__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003172__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003294__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003294__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003294__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003416__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003416__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003416__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003538__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003538__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003538__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003660__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003660__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003660__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003782__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003782__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003782__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003904__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003904__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_003904__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004026__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004026__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004026__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004148__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004148__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004148__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004270__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004270__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004270__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004392__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004392__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004392__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004514__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004514__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004514__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004636__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004636__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004636__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004758__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004758__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004758__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004880__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004880__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_004880__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005002__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005002__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005002__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005124__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005124__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005124__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005246__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005246__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005246__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005368__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005368__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005368__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005490__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005490__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005490__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005612__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005612__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005612__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005734__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005734__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005734__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005856__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005856__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005856__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005978__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005978__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_005978__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006100__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006100__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006100__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006222__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006222__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006222__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006344__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006344__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006344__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006466__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006466__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006466__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006588__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006588__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006588__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006710__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006710__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006710__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006832__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006832__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006832__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006954__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006954__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_006954__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_007076__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_007076__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_007076__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_007198__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_007198__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_007198__original.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_007320__aug_01.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_007320__aug_02.jpg
+│   │   ├── 95_fur_incin_AB_Stacks_Thermal__frame_007320__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000000__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000000__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000000__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000000__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000000__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000123__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000123__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000123__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000123__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000123__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000246__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000246__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000246__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000246__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000246__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000369__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000369__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000369__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000369__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000369__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000492__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000492__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000492__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000492__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000492__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000615__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000615__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000615__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000615__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000615__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000738__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000738__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000738__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000738__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000738__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000861__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000861__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000861__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000861__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000861__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000984__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000984__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000984__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000984__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_000984__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001107__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001107__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001107__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001107__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001107__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001230__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001230__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001230__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001230__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001230__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001353__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001353__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001353__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001353__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001353__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001476__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001476__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001476__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001476__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001476__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001599__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001599__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001599__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001599__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001599__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001722__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001722__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001722__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001722__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001722__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001845__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001845__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001845__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001845__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001845__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001968__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001968__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001968__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001968__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_001968__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002091__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002091__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002091__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002091__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002091__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002214__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002214__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002214__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002214__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002214__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002337__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002337__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002337__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002337__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002337__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002460__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002460__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002460__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002460__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002460__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002583__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002583__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002583__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002583__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002583__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002706__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002706__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002706__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002706__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002706__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002829__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002829__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002829__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002829__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002829__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002952__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002952__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002952__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002952__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_002952__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003075__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003075__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003075__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003075__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003075__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003198__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003198__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003198__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003198__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003198__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003321__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003321__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003321__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003321__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003321__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003444__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003444__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003444__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003444__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003444__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003567__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003567__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003567__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003567__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003567__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003690__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003690__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003690__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003690__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003690__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003813__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003813__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003813__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003813__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003813__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003936__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003936__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003936__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003936__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_003936__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004059__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004059__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004059__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004059__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004059__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004182__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004182__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004182__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004182__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004182__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004305__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004305__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004305__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004305__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004305__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004428__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004428__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004428__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004428__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004428__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004551__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004551__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004551__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004551__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004551__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004674__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004674__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004674__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004674__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004674__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004797__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004797__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004797__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004797__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004797__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004920__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004920__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004920__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004920__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_004920__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005043__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005043__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005043__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005043__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005043__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005166__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005166__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005166__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005166__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005166__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005289__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005289__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005289__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005289__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005289__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005412__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005412__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005412__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005412__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005412__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005535__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005535__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005535__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005535__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005535__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005658__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005658__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005658__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005658__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005658__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005781__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005781__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005781__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005781__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005781__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005904__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005904__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005904__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005904__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_005904__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006027__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006027__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006027__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006027__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006027__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006150__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006150__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006150__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006150__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006150__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006273__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006273__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006273__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006273__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006273__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006396__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006396__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006396__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006396__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006396__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006519__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006519__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006519__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006519__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006519__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006642__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006642__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006642__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006642__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006642__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006765__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006765__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006765__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006765__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006765__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006888__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006888__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006888__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006888__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_006888__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007011__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007011__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007011__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007011__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007011__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007134__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007134__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007134__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007134__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007134__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007257__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007257__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007257__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007257__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007257__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007380__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007380__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007380__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007380__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007380__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007503__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007503__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007503__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007503__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007503__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007626__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007626__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007626__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007626__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007626__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007749__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007749__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007749__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007749__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007749__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007872__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007872__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007872__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007872__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007872__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007995__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007995__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007995__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007995__aug_04.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_007995__original.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_008118__aug_01.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_008118__aug_02.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_008118__aug_03.jpg
+│   │   ├── 97_A_200_Corridor_Thermal__frame_008118__aug_04.jpg
+│   │   └── 97_A_200_Corridor_Thermal__frame_008118__original.jpg
+│   ├── metadata
+│   │   ├── classes.json
+│   │   ├── dataset_manifest.csv
+│   │   └── dataset_summary.json
+│   └── previews
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_000000__aug_01.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_000000__aug_02.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_000000__original.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_001220__aug_01.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_001220__aug_02.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_001220__original.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_002440__aug_01.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_002440__aug_02.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_002440__original.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_003660__aug_01.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_003660__aug_02.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_003660__original.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_004880__aug_01.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_004880__aug_02.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_004880__original.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_006100__aug_01.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_006100__aug_02.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_006100__original.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_007320__aug_01.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_007320__aug_02.png
+│       ├── 95_fur_incin_AB_Stacks_Thermal__frame_007320__original.png
+│       ├── 97_A_200_Corridor_Thermal__frame_000000__aug_01.png
+│       ├── 97_A_200_Corridor_Thermal__frame_000000__aug_02.png
+│       ├── 97_A_200_Corridor_Thermal__frame_000000__aug_03.png
+│       ├── 97_A_200_Corridor_Thermal__frame_000000__aug_04.png
+│       ├── 97_A_200_Corridor_Thermal__frame_000000__original.png
+│       ├── 97_A_200_Corridor_Thermal__frame_001230__aug_01.png
+│       ├── 97_A_200_Corridor_Thermal__frame_001230__aug_02.png
+│       ├── 97_A_200_Corridor_Thermal__frame_001230__aug_03.png
+│       ├── 97_A_200_Corridor_Thermal__frame_001230__aug_04.png
+│       ├── 97_A_200_Corridor_Thermal__frame_001230__original.png
+│       ├── 97_A_200_Corridor_Thermal__frame_002460__aug_01.png
+│       ├── 97_A_200_Corridor_Thermal__frame_002460__aug_02.png
+│       ├── 97_A_200_Corridor_Thermal__frame_002460__aug_03.png
+│       ├── 97_A_200_Corridor_Thermal__frame_002460__aug_04.png
+│       ├── 97_A_200_Corridor_Thermal__frame_002460__original.png
+│       ├── 97_A_200_Corridor_Thermal__frame_003690__aug_01.png
+│       ├── 97_A_200_Corridor_Thermal__frame_003690__aug_02.png
+│       ├── 97_A_200_Corridor_Thermal__frame_003690__aug_03.png
+│       ├── 97_A_200_Corridor_Thermal__frame_003690__aug_04.png
+│       ├── 97_A_200_Corridor_Thermal__frame_003690__original.png
+│       ├── 97_A_200_Corridor_Thermal__frame_004920__aug_01.png
+│       ├── 97_A_200_Corridor_Thermal__frame_004920__aug_02.png
+│       ├── 97_A_200_Corridor_Thermal__frame_004920__aug_03.png
+│       ├── 97_A_200_Corridor_Thermal__frame_004920__aug_04.png
+│       ├── 97_A_200_Corridor_Thermal__frame_004920__original.png
+│       ├── 97_A_200_Corridor_Thermal__frame_006150__aug_01.png
+│       ├── 97_A_200_Corridor_Thermal__frame_006150__aug_02.png
+│       ├── 97_A_200_Corridor_Thermal__frame_006150__aug_03.png
+│       ├── 97_A_200_Corridor_Thermal__frame_006150__aug_04.png
+│       ├── 97_A_200_Corridor_Thermal__frame_006150__original.png
+│       ├── 97_A_200_Corridor_Thermal__frame_007380__aug_01.png
+│       ├── 97_A_200_Corridor_Thermal__frame_007380__aug_02.png
+│       ├── 97_A_200_Corridor_Thermal__frame_007380__aug_03.png
+│       ├── 97_A_200_Corridor_Thermal__frame_007380__aug_04.png
+│       └── 97_A_200_Corridor_Thermal__frame_007380__original.png
+├── raw-videos
+│   ├── People Movement
+│   │   ├── 2026-08-09-101320_2026-08-09-101759_1000062$1$0$110.mp4
+│   │   ├── 2026-08-09-101320_2026-08-09-101801_1000062$1$0$111.mp4
+│   │   ├── 2026-08-09-101759_2026-08-09-102000_1000062$1$0$111.mp4
+│   │   ├── 2026-08-09-101800_2026-08-09-102001_1000062$1$0$110.mp4
+│   │   ├── 2026-08-09-101957_2026-08-09-102205_1000062$1$0$111.mp4
+│   │   ├── 2026-08-09-101959_2026-08-09-102201_1000062$1$0$110.mp4
+│   │   ├── 2026-08-09-102210_2026-08-09-102421_1000062$1$0$110.mp4
+│   │   └── 2026-08-09-102210_2026-08-09-102421_1000062$1$0$111.mp4
+│   ├── Vehicle
+│   │   ├── 2026-08-09-103557_2026-08-09-104230_1000062$1$0$110.mp4
+│   │   ├── 2026-08-09-103559_2026-08-09-104121_1000062$1$0$111.mp4
+│   │   ├── 2026-08-09-104132_2026-08-09-104220_1000062$1$0$110.mp4
+│   │   └── 2026-08-09-104132_2026-08-09-104220_1000062$1$0$111.mp4
+│   ├── 111. VCL Striper.mp4
+│   ├── 2026-08-09-134109_2026-08-09-134150_1000062$1$0$97.mp4
+│   ├── 2026-08-09-134109_2026-08-09-134151_1000062$1$0$98.mp4
+│   ├── 2026-08-09-135055_2026-08-09-135205_1000062$1$0$88.mp4
+│   ├── 2026-08-09-135059_2026-08-09-135200_1000062$1$0$87.mp4
+│   ├── 2026-08-09-151100_2026-08-09-151130_1000062$1$0$79.mp4
+│   ├── 2026-08-09-151100_2026-08-09-151130_1000062$1$0$80.mp4
+│   ├── 80. PP- 407 ABE.mp4
+│   ├── 81. PP- 407 ABE Thermal.mp4
+│   ├── 83. HCL Colunm Thermal.mp4
+│   ├── 84. OVR East.mp4
+│   ├── 85. OVR East Thermal.mp4
+│   ├── 86. Condenser Platform North.mp4
+│   ├── 88. Furnace DSQ AB North.mp4
+│   ├── 90. OXY West Side.mp4
+│   ├── 91. OXY West Side Thermal.mp4
+│   ├── 92. MS- 302.mp4
+│   ├── 93. MS- 302 Thermal.mp4
+│   ├── 94.fur incin AB Stacks.mp4
+│   ├── 95.fur incin AB Stacks Thermal.mp4
+│   └── 97. A- 200 Corridor Thermal.mp4
+├── step01-annotate-videos
+│   ├── 95.fur incin AB Stacks Thermal
+│   │   ├── annotated_reference_frame.png
+│   │   ├── annotated_video.mp4
+│   │   ├── reference_frame.png
+│   │   ├── regions.json
+│   │   └── regions.pkl
+│   └── 97. A- 200 Corridor Thermal
+│       ├── annotated_reference_frame.png
+│       ├── annotated_video.mp4
+│       ├── reference_frame.png
+│       ├── regions.json
+│       └── regions.pkl
+├── step02-ocr-scale-config
+│   ├── 95.fur incin AB Stacks Thermal
+│   │   ├── ocr_config_debug
+│   │   │   ├── MAX_01_green_difference_psm7.png
+│   │   │   ├── MAX_02_green_difference_psm8.png
+│   │   │   ├── MAX_03_hsv_green_psm7.png
+│   │   │   ├── MAX_04_green_channel_otsu_psm7.png
+│   │   │   ├── MAX_05_gray_otsu_psm7.png
+│   │   │   ├── MAX_06_gray_adaptive_psm7.png
+│   │   │   ├── MAX_original_crop.png
+│   │   │   ├── MIN_01_green_difference_psm7.png
+│   │   │   ├── MIN_02_green_difference_psm8.png
+│   │   │   ├── MIN_03_hsv_green_psm7.png
+│   │   │   ├── MIN_04_green_channel_otsu_psm7.png
+│   │   │   ├── MIN_05_gray_otsu_psm7.png
+│   │   │   ├── MIN_06_gray_adaptive_psm7.png
+│   │   │   └── MIN_original_crop.png
+│   │   ├── scale_config.json
+│   │   ├── scale_config.pkl
+│   │   └── scale_config_preview.png
+│   └── 97. A- 200 Corridor Thermal
+│       ├── ocr_config_debug
+│       │   ├── MAX_01_green_difference_psm7.png
+│       │   ├── MAX_02_green_difference_psm8.png
+│       │   ├── MAX_03_hsv_green_psm7.png
+│       │   ├── MAX_04_green_channel_otsu_psm7.png
+│       │   ├── MAX_05_gray_otsu_psm7.png
+│       │   ├── MAX_06_gray_adaptive_psm7.png
+│       │   ├── MAX_original_crop.png
+│       │   ├── MIN_01_green_difference_psm7.png
+│       │   ├── MIN_02_green_difference_psm8.png
+│       │   ├── MIN_03_hsv_green_psm7.png
+│       │   ├── MIN_04_green_channel_otsu_psm7.png
+│       │   ├── MIN_05_gray_otsu_psm7.png
+│       │   ├── MIN_06_gray_adaptive_psm7.png
+│       │   └── MIN_original_crop.png
+│       ├── scale_config.json
+│       ├── scale_config.pkl
+│       └── scale_config_preview.png
+├── step03-roi-videos
+│   ├── 95.fur incin AB Stacks Thermal
+│   │   ├── ocr_debug_rejected
+│   │   │   ├── frame_000008_ORIGINAL_MAX.png
+│   │   │   ├── frame_000008_ORIGINAL_MIN.png
+│   │   │   ├── frame_000008_PRIMARY_MAX.png
+│   │   │   ├── frame_000008_PRIMARY_MIN.png
+│   │   │   ├── frame_000024_ORIGINAL_MAX.png
+│   │   │   ├── frame_000024_ORIGINAL_MIN.png
+│   │   │   ├── frame_000024_PRIMARY_MAX.png
+│   │   │   ├── frame_000024_PRIMARY_MIN.png
+│   │   │   ├── frame_000032_ORIGINAL_MAX.png
+│   │   │   ├── frame_000032_ORIGINAL_MIN.png
+│   │   │   ├── frame_000032_PRIMARY_MAX.png
+│   │   │   ├── frame_000032_PRIMARY_MIN.png
+│   │   │   ├── frame_000040_ORIGINAL_MAX.png
+│   │   │   ├── frame_000040_ORIGINAL_MIN.png
+│   │   │   ├── frame_000040_PRIMARY_MAX.png
+│   │   │   ├── frame_000040_PRIMARY_MIN.png
+│   │   │   ├── frame_000048_ORIGINAL_MAX.png
+│   │   │   ├── frame_000048_ORIGINAL_MIN.png
+│   │   │   ├── frame_000048_PRIMARY_MAX.png
+│   │   │   ├── frame_000048_PRIMARY_MIN.png
+│   │   │   ├── frame_000056_ORIGINAL_MAX.png
+│   │   │   ├── frame_000056_ORIGINAL_MIN.png
+│   │   │   ├── frame_000056_PRIMARY_MAX.png
+│   │   │   ├── frame_000056_PRIMARY_MIN.png
+│   │   │   ├── frame_000080_ORIGINAL_MAX.png
+│   │   │   ├── frame_000080_ORIGINAL_MIN.png
+│   │   │   ├── frame_000080_PRIMARY_MAX.png
+│   │   │   ├── frame_000080_PRIMARY_MIN.png
+│   │   │   ├── frame_000104_ORIGINAL_MAX.png
+│   │   │   ├── frame_000104_ORIGINAL_MIN.png
+│   │   │   ├── frame_000104_PRIMARY_MAX.png
+│   │   │   ├── frame_000104_PRIMARY_MIN.png
+│   │   │   ├── frame_000120_ORIGINAL_MAX.png
+│   │   │   ├── frame_000120_ORIGINAL_MIN.png
+│   │   │   ├── frame_000120_PRIMARY_MAX.png
+│   │   │   ├── frame_000120_PRIMARY_MIN.png
+│   │   │   ├── frame_000128_ORIGINAL_MAX.png
+│   │   │   ├── frame_000128_ORIGINAL_MIN.png
+│   │   │   ├── frame_000128_PRIMARY_MAX.png
+│   │   │   ├── frame_000128_PRIMARY_MIN.png
+│   │   │   ├── frame_000136_ORIGINAL_MAX.png
+│   │   │   ├── frame_000136_ORIGINAL_MIN.png
+│   │   │   ├── frame_000136_PRIMARY_MAX.png
+│   │   │   ├── frame_000136_PRIMARY_MIN.png
+│   │   │   ├── frame_000168_ORIGINAL_MAX.png
+│   │   │   ├── frame_000168_ORIGINAL_MIN.png
+│   │   │   ├── frame_000168_PRIMARY_MAX.png
+│   │   │   ├── frame_000168_PRIMARY_MIN.png
+│   │   │   ├── frame_000176_ORIGINAL_MAX.png
+│   │   │   ├── frame_000176_ORIGINAL_MIN.png
+│   │   │   ├── frame_000176_PRIMARY_MAX.png
+│   │   │   ├── frame_000176_PRIMARY_MIN.png
+│   │   │   ├── frame_000248_ORIGINAL_MAX.png
+│   │   │   ├── frame_000248_ORIGINAL_MIN.png
+│   │   │   ├── frame_000248_PRIMARY_MAX.png
+│   │   │   ├── frame_000248_PRIMARY_MIN.png
+│   │   │   ├── frame_000272_ORIGINAL_MAX.png
+│   │   │   ├── frame_000272_ORIGINAL_MIN.png
+│   │   │   ├── frame_000272_PRIMARY_MAX.png
+│   │   │   ├── frame_000272_PRIMARY_MIN.png
+│   │   │   ├── frame_000296_ORIGINAL_MAX.png
+│   │   │   ├── frame_000296_ORIGINAL_MIN.png
+│   │   │   ├── frame_000296_PRIMARY_MAX.png
+│   │   │   ├── frame_000296_PRIMARY_MIN.png
+│   │   │   ├── frame_000320_ORIGINAL_MAX.png
+│   │   │   ├── frame_000320_ORIGINAL_MIN.png
+│   │   │   ├── frame_000320_PRIMARY_MAX.png
+│   │   │   ├── frame_000320_PRIMARY_MIN.png
+│   │   │   ├── frame_000344_ORIGINAL_MAX.png
+│   │   │   ├── frame_000344_ORIGINAL_MIN.png
+│   │   │   ├── frame_000344_PRIMARY_MAX.png
+│   │   │   ├── frame_000344_PRIMARY_MIN.png
+│   │   │   ├── frame_000368_ORIGINAL_MAX.png
+│   │   │   ├── frame_000368_ORIGINAL_MIN.png
+│   │   │   ├── frame_000368_PRIMARY_MAX.png
+│   │   │   ├── frame_000368_PRIMARY_MIN.png
+│   │   │   ├── frame_000384_ORIGINAL_MAX.png
+│   │   │   ├── frame_000384_ORIGINAL_MIN.png
+│   │   │   ├── frame_000384_PRIMARY_MAX.png
+│   │   │   ├── frame_000384_PRIMARY_MIN.png
+│   │   │   ├── frame_000392_ORIGINAL_MAX.png
+│   │   │   ├── frame_000392_ORIGINAL_MIN.png
+│   │   │   ├── frame_000392_PRIMARY_MAX.png
+│   │   │   ├── frame_000392_PRIMARY_MIN.png
+│   │   │   ├── frame_000400_ORIGINAL_MAX.png
+│   │   │   ├── frame_000400_ORIGINAL_MIN.png
+│   │   │   ├── frame_000400_PRIMARY_MAX.png
+│   │   │   ├── frame_000400_PRIMARY_MIN.png
+│   │   │   ├── frame_000408_ORIGINAL_MAX.png
+│   │   │   ├── frame_000408_ORIGINAL_MIN.png
+│   │   │   ├── frame_000408_PRIMARY_MAX.png
+│   │   │   ├── frame_000408_PRIMARY_MIN.png
+│   │   │   ├── frame_000432_ORIGINAL_MAX.png
+│   │   │   ├── frame_000432_ORIGINAL_MIN.png
+│   │   │   ├── frame_000432_PRIMARY_MAX.png
+│   │   │   ├── frame_000432_PRIMARY_MIN.png
+│   │   │   ├── frame_000440_ORIGINAL_MAX.png
+│   │   │   ├── frame_000440_ORIGINAL_MIN.png
+│   │   │   ├── frame_000440_PRIMARY_MAX.png
+│   │   │   ├── frame_000440_PRIMARY_MIN.png
+│   │   │   ├── frame_000448_ORIGINAL_MAX.png
+│   │   │   ├── frame_000448_ORIGINAL_MIN.png
+│   │   │   ├── frame_000448_PRIMARY_MAX.png
+│   │   │   ├── frame_000448_PRIMARY_MIN.png
+│   │   │   ├── frame_000464_ORIGINAL_MAX.png
+│   │   │   ├── frame_000464_ORIGINAL_MIN.png
+│   │   │   ├── frame_000464_PRIMARY_MAX.png
+│   │   │   ├── frame_000464_PRIMARY_MIN.png
+│   │   │   ├── frame_000472_ORIGINAL_MAX.png
+│   │   │   ├── frame_000472_ORIGINAL_MIN.png
+│   │   │   ├── frame_000472_PRIMARY_MAX.png
+│   │   │   ├── frame_000472_PRIMARY_MIN.png
+│   │   │   ├── frame_000592_ORIGINAL_MAX.png
+│   │   │   ├── frame_000592_ORIGINAL_MIN.png
+│   │   │   ├── frame_000592_PRIMARY_MAX.png
+│   │   │   ├── frame_000592_PRIMARY_MIN.png
+│   │   │   ├── frame_000616_ORIGINAL_MAX.png
+│   │   │   ├── frame_000616_ORIGINAL_MIN.png
+│   │   │   ├── frame_000616_PRIMARY_MAX.png
+│   │   │   └── frame_000616_PRIMARY_MIN.png
+│   │   ├── scale_readings.csv
+│   │   ├── temperature_log.csv
+│   │   ├── temperature_summary.csv
+│   │   └── thermal_temperature_output.mp4
+│   └── 97. A- 200 Corridor Thermal
+│       ├── ocr_debug_rejected
+│       │   ├── frame_000024_ORIGINAL_MAX.png
+│       │   ├── frame_000024_ORIGINAL_MIN.png
+│       │   ├── frame_000024_PRIMARY_MAX.png
+│       │   ├── frame_000024_PRIMARY_MIN.png
+│       │   ├── frame_000032_ORIGINAL_MAX.png
+│       │   ├── frame_000032_ORIGINAL_MIN.png
+│       │   ├── frame_000032_PRIMARY_MAX.png
+│       │   ├── frame_000032_PRIMARY_MIN.png
+│       │   ├── frame_000040_ORIGINAL_MAX.png
+│       │   ├── frame_000040_ORIGINAL_MIN.png
+│       │   ├── frame_000040_PRIMARY_MAX.png
+│       │   ├── frame_000040_PRIMARY_MIN.png
+│       │   ├── frame_000056_ORIGINAL_MAX.png
+│       │   ├── frame_000056_ORIGINAL_MIN.png
+│       │   ├── frame_000056_PRIMARY_MAX.png
+│       │   ├── frame_000056_PRIMARY_MIN.png
+│       │   ├── frame_000064_ORIGINAL_MAX.png
+│       │   ├── frame_000064_ORIGINAL_MIN.png
+│       │   ├── frame_000064_PRIMARY_MAX.png
+│       │   ├── frame_000064_PRIMARY_MIN.png
+│       │   ├── frame_000072_ORIGINAL_MAX.png
+│       │   ├── frame_000072_ORIGINAL_MIN.png
+│       │   ├── frame_000072_PRIMARY_MAX.png
+│       │   ├── frame_000072_PRIMARY_MIN.png
+│       │   ├── frame_000080_ORIGINAL_MAX.png
+│       │   ├── frame_000080_ORIGINAL_MIN.png
+│       │   ├── frame_000080_PRIMARY_MAX.png
+│       │   ├── frame_000080_PRIMARY_MIN.png
+│       │   ├── frame_000088_ORIGINAL_MAX.png
+│       │   ├── frame_000088_ORIGINAL_MIN.png
+│       │   ├── frame_000088_PRIMARY_MAX.png
+│       │   ├── frame_000088_PRIMARY_MIN.png
+│       │   ├── frame_000096_ORIGINAL_MAX.png
+│       │   ├── frame_000096_ORIGINAL_MIN.png
+│       │   ├── frame_000096_PRIMARY_MAX.png
+│       │   ├── frame_000096_PRIMARY_MIN.png
+│       │   ├── frame_000104_ORIGINAL_MAX.png
+│       │   ├── frame_000104_ORIGINAL_MIN.png
+│       │   ├── frame_000104_PRIMARY_MAX.png
+│       │   ├── frame_000104_PRIMARY_MIN.png
+│       │   ├── frame_000112_ORIGINAL_MAX.png
+│       │   ├── frame_000112_ORIGINAL_MIN.png
+│       │   ├── frame_000112_PRIMARY_MAX.png
+│       │   ├── frame_000112_PRIMARY_MIN.png
+│       │   ├── frame_000120_ORIGINAL_MAX.png
+│       │   ├── frame_000120_ORIGINAL_MIN.png
+│       │   ├── frame_000120_PRIMARY_MAX.png
+│       │   ├── frame_000120_PRIMARY_MIN.png
+│       │   ├── frame_000128_ORIGINAL_MAX.png
+│       │   ├── frame_000128_ORIGINAL_MIN.png
+│       │   ├── frame_000128_PRIMARY_MAX.png
+│       │   ├── frame_000128_PRIMARY_MIN.png
+│       │   ├── frame_000136_ORIGINAL_MAX.png
+│       │   ├── frame_000136_ORIGINAL_MIN.png
+│       │   ├── frame_000136_PRIMARY_MAX.png
+│       │   ├── frame_000136_PRIMARY_MIN.png
+│       │   ├── frame_000144_ORIGINAL_MAX.png
+│       │   ├── frame_000144_ORIGINAL_MIN.png
+│       │   ├── frame_000144_PRIMARY_MAX.png
+│       │   ├── frame_000144_PRIMARY_MIN.png
+│       │   ├── frame_000160_ORIGINAL_MAX.png
+│       │   ├── frame_000160_ORIGINAL_MIN.png
+│       │   ├── frame_000160_PRIMARY_MAX.png
+│       │   ├── frame_000160_PRIMARY_MIN.png
+│       │   ├── frame_000168_ORIGINAL_MAX.png
+│       │   ├── frame_000168_ORIGINAL_MIN.png
+│       │   ├── frame_000168_PRIMARY_MAX.png
+│       │   ├── frame_000168_PRIMARY_MIN.png
+│       │   ├── frame_000176_ORIGINAL_MAX.png
+│       │   ├── frame_000176_ORIGINAL_MIN.png
+│       │   ├── frame_000176_PRIMARY_MAX.png
+│       │   ├── frame_000176_PRIMARY_MIN.png
+│       │   ├── frame_000184_ORIGINAL_MAX.png
+│       │   ├── frame_000184_ORIGINAL_MIN.png
+│       │   ├── frame_000184_PRIMARY_MAX.png
+│       │   ├── frame_000184_PRIMARY_MIN.png
+│       │   ├── frame_000192_ORIGINAL_MAX.png
+│       │   ├── frame_000192_ORIGINAL_MIN.png
+│       │   ├── frame_000192_PRIMARY_MAX.png
+│       │   ├── frame_000192_PRIMARY_MIN.png
+│       │   ├── frame_000200_ORIGINAL_MAX.png
+│       │   ├── frame_000200_ORIGINAL_MIN.png
+│       │   ├── frame_000200_PRIMARY_MAX.png
+│       │   ├── frame_000200_PRIMARY_MIN.png
+│       │   ├── frame_000208_ORIGINAL_MAX.png
+│       │   ├── frame_000208_ORIGINAL_MIN.png
+│       │   ├── frame_000208_PRIMARY_MAX.png
+│       │   ├── frame_000208_PRIMARY_MIN.png
+│       │   ├── frame_000216_ORIGINAL_MAX.png
+│       │   ├── frame_000216_ORIGINAL_MIN.png
+│       │   ├── frame_000216_PRIMARY_MAX.png
+│       │   ├── frame_000216_PRIMARY_MIN.png
+│       │   ├── frame_000224_ORIGINAL_MAX.png
+│       │   ├── frame_000224_ORIGINAL_MIN.png
+│       │   ├── frame_000224_PRIMARY_MAX.png
+│       │   ├── frame_000224_PRIMARY_MIN.png
+│       │   ├── frame_000240_ORIGINAL_MAX.png
+│       │   ├── frame_000240_ORIGINAL_MIN.png
+│       │   ├── frame_000240_PRIMARY_MAX.png
+│       │   ├── frame_000240_PRIMARY_MIN.png
+│       │   ├── frame_000248_ORIGINAL_MAX.png
+│       │   ├── frame_000248_ORIGINAL_MIN.png
+│       │   ├── frame_000248_PRIMARY_MAX.png
+│       │   ├── frame_000248_PRIMARY_MIN.png
+│       │   ├── frame_000256_ORIGINAL_MAX.png
+│       │   ├── frame_000256_ORIGINAL_MIN.png
+│       │   ├── frame_000256_PRIMARY_MAX.png
+│       │   ├── frame_000256_PRIMARY_MIN.png
+│       │   ├── frame_000272_ORIGINAL_MAX.png
+│       │   ├── frame_000272_ORIGINAL_MIN.png
+│       │   ├── frame_000272_PRIMARY_MAX.png
+│       │   ├── frame_000272_PRIMARY_MIN.png
+│       │   ├── frame_000280_ORIGINAL_MAX.png
+│       │   ├── frame_000280_ORIGINAL_MIN.png
+│       │   ├── frame_000280_PRIMARY_MAX.png
+│       │   ├── frame_000280_PRIMARY_MIN.png
+│       │   ├── frame_000288_ORIGINAL_MAX.png
+│       │   ├── frame_000288_ORIGINAL_MIN.png
+│       │   ├── frame_000288_PRIMARY_MAX.png
+│       │   └── frame_000288_PRIMARY_MIN.png
+│       ├── scale_readings.csv
+│       ├── temperature_log.csv
+│       ├── temperature_summary.csv
+│       └── thermal_temperature_output.mp4
+├── synthetic-incidental-videos
+│   └── 97. A- 200 Corridor Thermal__TO__95.fur incin AB Stacks Thermal__phase_b_test.mp4
+├── synthetic-moved-videos
+│   ├── 95.fur incin AB Stacks Thermal.mp4
+│   └── 97. A- 200 Corridor Thermal.mp4
+├── .gitignore
+├── annotate_thermal_video.py
+├── build_phase_c_dataset_v0.py
+├── commands_to_run.md
+├── configure_thermal_scale.py
+├── folder_structure.txt
+├── phase_a_accidental_camera_motion.py
+├── phase_b_scene_change_detector.py
+├── phase_c_dataset_config.json
+├── process_thermal_temperatures.py
+├── simulate_accidental_camera_movement.py
+└── simulate_incidental_camera_movement.py
