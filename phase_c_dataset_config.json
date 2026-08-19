@@ -1,0 +1,22 @@
+{
+  "default": {
+    "augmentations_per_frame": 2,
+    "max_dx": 35,
+    "max_dy": 25,
+    "max_rotation_deg": 2.5,
+    "min_scale": 0.97,
+    "max_scale": 1.03,
+    "max_attempts_per_augmentation": 30
+  },
+  "videos": {
+    "97. A- 200 Corridor Thermal": {
+      "augmentations_per_frame": 4,
+      "max_dx": 70,
+      "max_dy": 45,
+      "max_rotation_deg": 4.0,
+      "min_scale": 0.94,
+      "max_scale": 1.06,
+      "max_attempts_per_augmentation": 50
+    }
+  }
+}
