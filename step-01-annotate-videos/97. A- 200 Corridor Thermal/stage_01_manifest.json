@@ -1,0 +1,22 @@
+{
+    "manifest_version": 1,
+    "stage": "step_01",
+    "status": "completed",
+    "created_at_utc": "2026-08-19T12:40:24+00:00",
+    "source_video": {
+        "path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\raw-videos\\97. A- 200 Corridor Thermal.mp4",
+        "filename": "97. A- 200 Corridor Thermal.mp4",
+        "size_bytes": 84387218,
+        "mtime_ns": 1786952598167334200,
+        "sha256": "7759c4cfe74d066c4ea2f293880c9df2ed99c7039a7ba5c6f32cbe4885b4c1e1"
+    },
+    "inputs": {},
+    "settings": {
+        "reference_frame_number": 0
+    },
+    "outputs": {
+        "regions_json_sha256": "d872687dc01a719ab8ec478b92daf5bd4845be87c9a4afc55657a8f7945b6080",
+        "regions_pkl_filename": "regions.pkl",
+        "annotated_video_filename": "annotated_video.mp4"
+    }
+}
