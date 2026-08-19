@@ -995,4 +995,5 @@
 ├── step_02_configure_thermal_scale.py
 ├── step_03_process_thermal_temperatures.py
 ├── step_code.py
-└── step_commands_to_run.md
+├── step_commands_to_run.md
+└── thermal_mouse_hover_viewer.py
