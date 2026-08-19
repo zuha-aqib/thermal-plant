@@ -1,0 +1,38 @@
+{
+    "manifest_version": 1,
+    "stage": "step_03",
+    "status": "completed",
+    "created_at_utc": "2026-08-19T14:26:25+00:00",
+    "source_video": {
+        "path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\raw-videos\\95.fur incin AB Stacks Thermal.mp4",
+        "filename": "95.fur incin AB Stacks Thermal.mp4",
+        "size_bytes": 76721052,
+        "mtime_ns": 1786605117475391400,
+        "sha256": "d8b5ba7a3350ef522cf76bd896f5da1ff66b9d1cb2d1cee7e9445d22899a7ef5"
+    },
+    "inputs": {
+        "regions_json_path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\step-01-annotate-videos\\95.fur incin AB Stacks Thermal\\regions.json",
+        "regions_json_sha256": "bd311b95d944ad96bf4cf5e92c4343e1c4f22be6f0d0b275d76bc53d1ce23c44",
+        "scale_config_json_path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\step-02-ocr-scale-config\\95.fur incin AB Stacks Thermal\\scale_config.json",
+        "scale_config_json_sha256": "940738d7e71409451d69af81de7a06355b4817d54ea46af3c1ea760a96627c38"
+    },
+    "settings": {
+        "ocr_every_frames": 8,
+        "effective_ocr_hz": 3.0389908256880735,
+        "start_frame": 0,
+        "end_frame": 7419,
+        "erode_pixels": 0,
+        "max_channel_difference": 18,
+        "min_allowed_temp": -100.0,
+        "max_allowed_temp": 1000.0,
+        "min_scale_span_c": 5.0,
+        "max_scale_jump_c": 2.0,
+        "write_video": true
+    },
+    "outputs": {
+        "scale_readings_csv": "scale_readings.csv",
+        "temperature_log_csv": "temperature_log.csv",
+        "temperature_summary_csv": "temperature_summary.csv",
+        "processed_video": "thermal_temperature_output.mp4"
+    }
+}
