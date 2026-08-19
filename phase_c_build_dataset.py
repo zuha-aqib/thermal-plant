@@ -7,7 +7,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-DEFAULT_OUTPUT_ROOT = "phase-c-dataset-v0"
+DEFAULT_OUTPUT_ROOT = "phase-c-dataset"
 CLASS_NAME = "equipment"
 
 
@@ -303,7 +303,7 @@ def main():
     )
     parser.add_argument("--project-root", default=".")
     parser.add_argument("--raw-root", default="raw-videos")
-    parser.add_argument("--annotation-root", default="step01-annotate-videos")
+    parser.add_argument("--annotation-root", default="step-01-annotate-videos")
     parser.add_argument("--output", default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--config", default="phase_c_dataset_config.json")
     parser.add_argument("--sample-every-seconds", type=float, default=5.0)
