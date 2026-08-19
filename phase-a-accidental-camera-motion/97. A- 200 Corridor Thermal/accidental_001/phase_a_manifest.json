@@ -1,0 +1,41 @@
+{
+    "manifest_version": 1,
+    "stage": "phase_a_accidental_camera_motion",
+    "status": "completed",
+    "created_at_utc": "2026-08-19T14:21:08+00:00",
+    "source_video": {
+        "path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\synthetic-moved-videos\\97. A- 200 Corridor Thermal\\accidental_001.mp4",
+        "filename": "accidental_001.mp4",
+        "size_bytes": 51962518,
+        "mtime_ns": 1787144497166400300,
+        "sha256": "1052054c9dabb540b88ed8c0e9984f07f9abce4764edeec69545fcf63bbec5c5"
+    },
+    "inputs": {
+        "regions_json_path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\step-01-annotate-videos\\97. A- 200 Corridor Thermal\\regions.json",
+        "regions_json_sha256": "d872687dc01a719ab8ec478b92daf5bd4845be87c9a4afc55657a8f7945b6080"
+    },
+    "settings": {
+        "tracking_margin_pixels": 80,
+        "max_corners": 900,
+        "min_corner_distance": 7.0,
+        "min_inliers": 12,
+        "min_inlier_ratio": 0.45,
+        "max_delta_translation_pixels": 100.0,
+        "max_delta_rotation_deg": 5.0,
+        "min_delta_scale": 0.92,
+        "max_delta_scale": 1.08,
+        "max_cumulative_translation_pixels": 220.0,
+        "max_cumulative_rotation_deg": 10.0,
+        "min_cumulative_scale": 0.85,
+        "max_cumulative_scale": 1.15,
+        "scene_change_warning_frames": 20,
+        "show_fixed_polygons": true
+    },
+    "outputs": {
+        "motion_compensated_video": "motion_compensated_video.mp4",
+        "motion_log_csv": "motion_log.csv",
+        "motion_summary_json": "motion_summary.json",
+        "tracked_regions_json": "tracked_regions.json",
+        "tracked_regions_pkl": "tracked_regions.pkl"
+    }
+}
