@@ -1,0 +1,36 @@
+{
+    "manifest_version": 1,
+    "generator": "synthetic_accidental_camera_movement",
+    "source_video_name": "97. A- 200 Corridor Thermal.mp4",
+    "variants": [
+        {
+            "id": "accidental_001",
+            "signature": "6133abbe3f229df5",
+            "created_at_utc": "2026-08-19T13:01:37+00:00",
+            "output_filename": "accidental_001.mp4",
+            "source_video": {
+                "path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\raw-videos\\97. A- 200 Corridor Thermal.mp4",
+                "filename": "97. A- 200 Corridor Thermal.mp4",
+                "size_bytes": 84387218,
+                "mtime_ns": 1786952598167334200,
+                "sha256": "7759c4cfe74d066c4ea2f293880c9df2ed99c7039a7ba5c6f32cbe4885b4c1e1"
+            },
+            "parameters": {
+                "move_at_seconds": 4.0,
+                "dx_pixels": 20.0,
+                "dy_pixels": -10.0,
+                "rotation_degrees": 1.0,
+                "scale": 1.0,
+                "transition_frames": 4
+            },
+            "output": {
+                "path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\synthetic-moved-videos\\97. A- 200 Corridor Thermal\\accidental_001.mp4",
+                "filename": "accidental_001.mp4",
+                "size_bytes": 51962518,
+                "mtime_ns": 1787144497166400300,
+                "sha256": "1052054c9dabb540b88ed8c0e9984f07f9abce4764edeec69545fcf63bbec5c5"
+            }
+        }
+    ],
+    "last_updated_utc": "2026-08-19T13:01:37+00:00"
+}
