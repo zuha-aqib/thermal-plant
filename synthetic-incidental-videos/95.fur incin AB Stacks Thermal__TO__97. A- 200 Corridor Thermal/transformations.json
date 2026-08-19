@@ -1,0 +1,41 @@
+{
+    "manifest_version": 1,
+    "generator": "synthetic_incidental_camera_movement",
+    "source_a_name": "95.fur incin AB Stacks Thermal.mp4",
+    "source_b_name": "97. A- 200 Corridor Thermal.mp4",
+    "variants": [
+        {
+            "id": "incidental_001",
+            "signature": "296a92ce38ccd732",
+            "created_at_utc": "2026-08-19T13:05:44+00:00",
+            "output_filename": "incidental_001.mp4",
+            "source_a": {
+                "path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\raw-videos\\95.fur incin AB Stacks Thermal.mp4",
+                "filename": "95.fur incin AB Stacks Thermal.mp4",
+                "size_bytes": 76721052,
+                "mtime_ns": 1786605117475391400,
+                "sha256": "d8b5ba7a3350ef522cf76bd896f5da1ff66b9d1cb2d1cee7e9445d22899a7ef5"
+            },
+            "source_b": {
+                "path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\raw-videos\\97. A- 200 Corridor Thermal.mp4",
+                "filename": "97. A- 200 Corridor Thermal.mp4",
+                "size_bytes": 84387218,
+                "mtime_ns": 1786952598167334200,
+                "sha256": "7759c4cfe74d066c4ea2f293880c9df2ed99c7039a7ba5c6f32cbe4885b4c1e1"
+            },
+            "parameters": {
+                "stable_seconds": 4.0,
+                "transition_seconds": 1.2,
+                "return_to_first": true
+            },
+            "output": {
+                "path": "C:\\Users\\zuha.aqib\\OneDrive - Engro Corporation Limited\\Documents\\thermal-plant\\synthetic-incidental-videos\\95.fur incin AB Stacks Thermal__TO__97. A- 200 Corridor Thermal\\incidental_001.mp4",
+                "filename": "incidental_001.mp4",
+                "size_bytes": 3694211,
+                "mtime_ns": 1787144744308818100,
+                "sha256": "56ca862bb6592b33344243f8efcd51844062131cafa9afd748b7ac3324478c61"
+            }
+        }
+    ],
+    "last_updated_utc": "2026-08-19T13:05:44+00:00"
+}
