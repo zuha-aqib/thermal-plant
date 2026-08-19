@@ -6,6 +6,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+import step_code as ps
+
 
 # ============================================================
 # PHASE B: AUTOMATIC CAMERA-STATE / SCENE-CHANGE DETECTION
@@ -50,6 +52,16 @@ import numpy as np
 
 DEFAULT_OUTPUT_ROOT = "phase-b-scene-change-detection"
 
+MANIFEST_FILENAME = "phase_b_manifest.json"
+
+CORE_COMPLETION_FILES = (
+    "scene_state_video.mp4",
+    "scene_state_log.csv",
+    "scene_events.csv",
+    "view_library.json",
+    "scene_summary.json",
+)
+
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
@@ -63,36 +75,44 @@ CYAN = (255, 255, 0)
 # ============================================================
 
 
-def find_raw_videos_ancestor(video_path):
-    """Find the nearest parent folder named raw-videos."""
+def find_source_root_ancestor(video_path):
+    """Find a known source root whose hierarchy should be preserved.
+
+    Phase B is commonly run on raw videos or on tracked synthetic outputs.
+    Preserving the pair/source parent prevents unrelated files such as
+    ``incidental_001.mp4`` from colliding in the Phase-B output root.
+    """
     video_path = Path(video_path).resolve()
+    supported_roots = {
+        "raw-videos",
+        "synthetic-incidental-videos",
+        "synthetic-moved-videos",
+    }
 
     for parent in video_path.parents:
-        if parent.name.lower() == "raw-videos":
+        if parent.name.lower() in supported_roots:
             return parent
 
     return None
 
 
-
 def build_video_output_dir(video_path, output_root):
-    """
-    Mirror the raw-videos folder hierarchy.
+    """Mirror the hierarchy underneath known raw/synthetic roots.
 
-    Example:
+    Examples:
         raw-videos/Furnace/Camera-01/video.mp4
+            -> phase-b-scene-change-detection/Furnace/Camera-01/video/
 
-    becomes:
-        phase-b-scene-change-detection/
-            Furnace/Camera-01/video/
+        synthetic-incidental-videos/95__TO__97/incidental_001.mp4
+            -> phase-b-scene-change-detection/95__TO__97/incidental_001/
     """
     video_path = Path(video_path).resolve()
     output_root = Path(output_root).resolve()
 
-    raw_root = find_raw_videos_ancestor(video_path)
+    source_root = find_source_root_ancestor(video_path)
 
-    if raw_root is not None:
-        relative_video = video_path.relative_to(raw_root)
+    if source_root is not None:
+        relative_video = video_path.relative_to(source_root)
         relative_parent = relative_video.parent
     else:
         relative_parent = Path()
@@ -1436,6 +1456,141 @@ def process_video(video_path, output_dir, args):
     print(f"Summary            : {summary_path}")
 
 
+
+
+# ============================================================
+# PHASE-B STATE / PROVENANCE HELPERS
+# ============================================================
+
+
+def normalized_phase_b_settings(args):
+    """Return every CLI setting that can affect Phase-B output."""
+    return {
+        "analysis_width": int(args.analysis_width),
+        "ignore_top_fraction": float(args.ignore_top_fraction),
+        "ignore_bottom_fraction": float(args.ignore_bottom_fraction),
+        "ignore_left_fraction": float(args.ignore_left_fraction),
+        "ignore_right_fraction": float(args.ignore_right_fraction),
+        "max_channel_difference": int(args.max_channel_difference),
+        "moving_translation_threshold_pixels": float(args.moving_translation_threshold),
+        "stable_translation_threshold_pixels": float(args.stable_translation_threshold),
+        "moving_rotation_threshold_deg": float(args.moving_rotation_threshold),
+        "stable_rotation_threshold_deg": float(args.stable_rotation_threshold),
+        "moving_edge_change_threshold": float(args.moving_edge_change_threshold),
+        "stable_edge_change_threshold": float(args.stable_edge_change_threshold),
+        "failed_tracking_change_threshold": float(args.failed_tracking_change_threshold),
+        "min_motion_inliers": int(args.min_motion_inliers),
+        "min_motion_inlier_ratio": float(args.min_motion_inlier_ratio),
+        "moving_confirm_frames": int(args.moving_confirm_frames),
+        "stable_confirm_frames": int(args.stable_confirm_frames),
+        "scene_min_matches": int(args.scene_min_matches),
+        "scene_min_inliers": int(args.scene_min_inliers),
+        "scene_min_inlier_ratio": float(args.scene_min_inlier_ratio),
+        "new_view_banner_frames": int(args.new_view_banner_frames),
+    }
+
+
+def phase_b_view_library_complete(output_dir):
+    """A completed Phase-B run should contain at least VIEW_001 reference."""
+    view_dir = Path(output_dir) / "view-library"
+
+    if not view_dir.is_dir():
+        return False
+
+    return any(
+        path.is_file() and path.stat().st_size > 0
+        for path in view_dir.glob("VIEW_*_reference.png")
+    )
+
+
+def is_phase_b_legacy_complete(output_dir):
+    """Recognize a complete pre-manifest Phase-B result."""
+    return (
+        ps.verify_required_files(output_dir, CORE_COMPLETION_FILES)
+        and phase_b_view_library_complete(output_dir)
+    )
+
+
+def is_phase_b_tracked_complete(output_dir):
+    """True only for complete output + readable Phase-B manifest."""
+    output_dir = Path(output_dir)
+
+    if not ps.load_manifest(output_dir / MANIFEST_FILENAME):
+        return False
+
+    return is_phase_b_legacy_complete(output_dir)
+
+
+def build_phase_b_manifest(*, source_fingerprint, settings):
+    """Create the provenance receipt for one completed Phase-B run."""
+    return ps.make_manifest(
+        "phase_b_scene_change_detector",
+        source_video=source_fingerprint,
+        settings=settings,
+        outputs={
+            "scene_state_video": "scene_state_video.mp4",
+            "scene_state_log_csv": "scene_state_log.csv",
+            "scene_events_csv": "scene_events.csv",
+            "view_library_json": "view_library.json",
+            "scene_summary_json": "scene_summary.json",
+            "view_library_directory": "view-library",
+        },
+    )
+
+
+def phase_b_stale_reasons(
+    *,
+    existing_manifest,
+    current_source,
+    requested_settings,
+):
+    """Explain exactly why an existing tracked Phase-B result is stale."""
+    reasons = []
+
+    if not ps.same_file_content(
+        existing_manifest.get("source_video", {}),
+        current_source,
+    ):
+        reasons.append("Input video content changed")
+
+    old_settings = existing_manifest.get("settings", {})
+
+    friendly_names = {
+        "analysis_width": "analysis width",
+        "ignore_top_fraction": "ignored top fraction",
+        "ignore_bottom_fraction": "ignored bottom fraction",
+        "ignore_left_fraction": "ignored left fraction",
+        "ignore_right_fraction": "ignored right fraction",
+        "max_channel_difference": "UI color-rejection threshold",
+        "moving_translation_threshold_pixels": "moving translation threshold",
+        "stable_translation_threshold_pixels": "stable translation threshold",
+        "moving_rotation_threshold_deg": "moving rotation threshold",
+        "stable_rotation_threshold_deg": "stable rotation threshold",
+        "moving_edge_change_threshold": "moving edge-change threshold",
+        "stable_edge_change_threshold": "stable edge-change threshold",
+        "failed_tracking_change_threshold": "failed-tracking structural-change threshold",
+        "min_motion_inliers": "minimum motion inliers",
+        "min_motion_inlier_ratio": "minimum motion inlier ratio",
+        "moving_confirm_frames": "moving confirmation frame count",
+        "stable_confirm_frames": "stable confirmation frame count",
+        "scene_min_matches": "same-view minimum ORB matches",
+        "scene_min_inliers": "same-view minimum RANSAC inliers",
+        "scene_min_inlier_ratio": "same-view minimum inlier ratio",
+        "new_view_banner_frames": "new-view banner duration",
+    }
+
+    for key, new_value in requested_settings.items():
+        old_value = old_settings.get(key)
+
+        if old_value != new_value:
+            reasons.append(
+                f"Phase B {friendly_names.get(key, key)} changed "
+                f"({old_value} -> {new_value})"
+            )
+
+    return reasons
+
+
 # ============================================================
 # CLI
 # ============================================================
@@ -1658,16 +1813,180 @@ def main():
 
     video_path = Path(args.video).resolve()
 
+    if not video_path.is_file():
+        raise FileNotFoundError(f"Video does not exist: {video_path}")
+
     output_dir = build_video_output_dir(
         video_path=video_path,
         output_root=args.output,
     )
 
-    process_video(
-        video_path=video_path,
-        output_dir=output_dir,
-        args=args,
+    requested_settings = normalized_phase_b_settings(args)
+
+    # Validate the input before any existing completed output can be touched.
+    cap = cv2.VideoCapture(str(video_path))
+
+    if not cap.isOpened():
+        raise RuntimeError(f"Could not open video: {video_path}")
+
+    fps = float(cap.get(cv2.CAP_PROP_FPS))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+
+    if fps <= 0 or total_frames <= 0:
+        raise RuntimeError("Video reported invalid FPS/frame count.")
+
+    print("\n============================================")
+    print("PHASE B - SCENE CHANGE DETECTOR")
+    print("============================================")
+    print(f"Video      : {video_path}")
+    print(f"Resolution : {width} x {height}")
+    print(f"FPS        : {fps:.3f}")
+    print(f"Frames     : {total_frames}")
+    print(f"Output     : {output_dir}")
+
+    # --------------------------------------------------------
+    # CURRENT / STALE / LEGACY / PARTIAL / NEW classification.
+    # --------------------------------------------------------
+    print("\nChecking Phase-B dependencies...")
+    current_source = ps.fingerprint_video(video_path)
+
+    manifest_path = output_dir / MANIFEST_FILENAME
+    manifest_file_present = ps.file_exists_and_nonempty(manifest_path)
+    tracked_complete = is_phase_b_tracked_complete(output_dir)
+    legacy_complete = (
+        is_phase_b_legacy_complete(output_dir)
+        and not manifest_file_present
     )
+    partial_output = (
+        ps.has_any_output(output_dir)
+        and not tracked_complete
+        and not legacy_complete
+    )
+
+    should_process = True
+
+    if tracked_complete:
+        existing_manifest = ps.load_manifest(manifest_path) or {}
+        stale_reasons = phase_b_stale_reasons(
+            existing_manifest=existing_manifest,
+            current_source=current_source,
+            requested_settings=requested_settings,
+        )
+
+        if not stale_reasons:
+            print("\nPHASE B STATUS: CURRENT")
+            print("Existing output was generated using:")
+            print("  - Current input video")
+            print("  - Same Phase B scene/motion settings")
+            should_process = ps.prompt_yes_no(
+                "Re-run Phase B anyway?",
+                default=False,
+            )
+        else:
+            print("\nPHASE B STATUS: STALE")
+            print("The existing Phase-B output was made from older inputs/settings:")
+            for reason in stale_reasons:
+                print(f"  - {reason}")
+            should_process = ps.prompt_yes_no(
+                "Re-run Phase B using the current inputs/settings?",
+                default=True,
+            )
+
+    elif legacy_complete:
+        print("\nPHASE B STATUS: LEGACY / UNTRACKED")
+        print(
+            "A complete older Phase-B result exists, but there is no "
+            "phase_b_manifest.json proving which video/settings created it."
+        )
+        should_process = ps.prompt_yes_no(
+            "Re-run once to enable dependency tracking?",
+            default=False,
+        )
+
+    elif partial_output:
+        print("\nPHASE B STATUS: PARTIAL")
+        print("An incomplete Phase-B output folder exists.")
+        should_process = ps.prompt_yes_no(
+            "Restart Phase B from the beginning?",
+            default=True,
+        )
+
+    else:
+        print("\nPHASE B STATUS: NEW")
+        should_process = ps.prompt_yes_no(
+            f'Run Phase B for "{video_path.name}"?',
+            default=True,
+        )
+
+    if not should_process:
+        print("Skipped. Existing output was not changed.")
+        return
+
+    # --------------------------------------------------------
+    # Safe rerun: produce everything in a sibling temp folder first.
+    # --------------------------------------------------------
+    working_dir = output_dir.with_name(output_dir.name + ".__processing__")
+
+    if working_dir.exists():
+        print(f"\nRemoving previous incomplete working folder:\n{working_dir}")
+        ps.safe_remove(working_dir)
+
+    working_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        process_video(
+            video_path=video_path,
+            output_dir=working_dir,
+            args=args,
+        )
+
+        if not is_phase_b_legacy_complete(working_dir):
+            raise RuntimeError(
+                "Phase B finished but one or more required outputs "
+                "or view-library reference images are missing/empty."
+            )
+
+        manifest = build_phase_b_manifest(
+            source_fingerprint=current_source,
+            settings=requested_settings,
+        )
+        ps.save_json_atomic(
+            working_dir / MANIFEST_FILENAME,
+            manifest,
+        )
+
+        if not is_phase_b_tracked_complete(working_dir):
+            raise RuntimeError("Tracked Phase-B completion validation failed.")
+
+        ps.promote_completed_directory(
+            working_dir=working_dir,
+            final_dir=output_dir,
+        )
+
+        print("\n============================================")
+        print("PHASE B COMPLETED AND SAVED")
+        print("============================================")
+        print(f"Output   : {output_dir}")
+        print(f"Manifest : {output_dir / MANIFEST_FILENAME}")
+
+    except KeyboardInterrupt:
+        print(
+            "\n\nPhase B interrupted. The previous completed output, if any, "
+            "was not replaced."
+            f"\nIncomplete new work is kept at:\n{working_dir}"
+        )
+        raise
+
+    except Exception:
+        print(
+            "\nPhase B failed. The previous completed output, if any, "
+            "was not replaced."
+            f"\nIncomplete new work is kept at:\n{working_dir}"
+        )
+        raise
 
 
 if __name__ == "__main__":

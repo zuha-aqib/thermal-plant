@@ -9,6 +9,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+import step_code as ps
+
 
 # ============================================================
 # PHASE A: ACCIDENTAL CAMERA MOVEMENT COMPENSATION
@@ -51,6 +53,16 @@ LINE_THICKNESS = 2
 
 DEFAULT_OUTPUT_ROOT = "phase-a-accidental-camera-motion"
 
+MANIFEST_FILENAME = "phase_a_manifest.json"
+
+CORE_COMPLETION_FILES = (
+    "motion_compensated_video.mp4",
+    "motion_log.csv",
+    "motion_summary.json",
+    "tracked_regions.json",
+    "tracked_regions.pkl",
+)
+
 
 # ============================================================
 # FILE / PATH HELPERS
@@ -62,34 +74,46 @@ def load_json(path):
         return json.load(f)
 
 
-def find_raw_videos_ancestor(video_path):
-    """Find the nearest parent folder literally named raw-videos."""
+def find_source_root_ancestor(video_path):
+    """Find a known source root whose hierarchy should be preserved.
+
+    Phase A is commonly run on either:
+      - raw-videos/.../video.mp4
+      - synthetic-moved-videos/<source>/accidental_001.mp4
+
+    Preserving the synthetic parent folder is important because many source
+    videos can each have an ``accidental_001.mp4`` variant.
+    """
     video_path = Path(video_path).resolve()
+    supported_roots = {
+        "raw-videos",
+        "synthetic-moved-videos",
+    }
 
     for parent in video_path.parents:
-        if parent.name.lower() == "raw-videos":
+        if parent.name.lower() in supported_roots:
             return parent
 
     return None
 
 
 def build_video_output_dir(video_path, output_root):
-    """
-    Preserve nested folders underneath raw-videos.
+    """Preserve folders underneath raw/synthetic source roots.
 
-    Example:
+    Examples:
         raw-videos/Furnace/Camera-1/sample.mp4
+            -> phase-a-accidental-camera-motion/Furnace/Camera-1/sample/
 
-    becomes:
-        phase-a-accidental-camera-motion/Furnace/Camera-1/sample/
+        synthetic-moved-videos/97/accidental_001.mp4
+            -> phase-a-accidental-camera-motion/97/accidental_001/
     """
     video_path = Path(video_path).resolve()
     output_root = Path(output_root).resolve()
 
-    raw_root = find_raw_videos_ancestor(video_path)
+    source_root = find_source_root_ancestor(video_path)
 
-    if raw_root is not None:
-        relative_video = video_path.relative_to(raw_root)
+    if source_root is not None:
+        relative_video = video_path.relative_to(source_root)
         relative_parent = relative_video.parent
     else:
         relative_parent = Path()
@@ -950,6 +974,160 @@ def save_summary(output_dir, result):
     return path
 
 
+
+
+# ============================================================
+# PHASE-A STATE / PROVENANCE HELPERS
+# ============================================================
+
+
+def normalized_phase_a_settings(args):
+    """Return every CLI setting that can affect Phase-A output."""
+    return {
+        "tracking_margin_pixels": int(args.tracking_margin),
+        "max_corners": int(args.max_corners),
+        "min_corner_distance": float(args.min_corner_distance),
+        "min_inliers": int(args.min_inliers),
+        "min_inlier_ratio": float(args.min_inlier_ratio),
+        "max_delta_translation_pixels": float(args.max_delta_translation),
+        "max_delta_rotation_deg": float(args.max_delta_rotation),
+        "min_delta_scale": float(args.min_delta_scale),
+        "max_delta_scale": float(args.max_delta_scale),
+        "max_cumulative_translation_pixels": float(args.max_cumulative_translation),
+        "max_cumulative_rotation_deg": float(args.max_cumulative_rotation),
+        "min_cumulative_scale": float(args.min_cumulative_scale),
+        "max_cumulative_scale": float(args.max_cumulative_scale),
+        "scene_change_warning_frames": int(args.scene_change_warning_frames),
+        "show_fixed_polygons": bool(args.show_fixed_polygons),
+    }
+
+
+def is_phase_a_legacy_complete(output_dir):
+    """Recognize a complete pre-manifest Phase-A result."""
+    return ps.verify_required_files(output_dir, CORE_COMPLETION_FILES)
+
+
+def is_phase_a_tracked_complete(output_dir):
+    """True only for a complete output that also has a readable manifest."""
+    output_dir = Path(output_dir)
+
+    if not ps.load_manifest(output_dir / MANIFEST_FILENAME):
+        return False
+
+    return ps.verify_required_files(output_dir, CORE_COMPLETION_FILES)
+
+
+def annotation_tracking_warnings(regions_json_path):
+    """Warn if regions.json no longer matches its own Step-01 receipt.
+
+    We deliberately do NOT require the Step-01 raw-video hash to equal the
+    Phase-A input-video hash.  Phase A is often run on a synthetic moved video
+    while intentionally reusing annotations from its original stable source.
+    """
+    regions_json_path = Path(regions_json_path)
+    manifest = ps.load_manifest(
+        regions_json_path.parent / "stage_01_manifest.json"
+    )
+
+    if not manifest:
+        return []
+
+    stored_hash = manifest.get("outputs", {}).get("regions_json_sha256")
+
+    if not stored_hash:
+        return []
+
+    current_hash = ps.hash_json_file(regions_json_path)
+
+    if stored_hash != current_hash:
+        return [
+            "regions.json no longer matches its Step-01 completion manifest"
+        ]
+
+    return []
+
+
+def build_phase_a_manifest(
+    *,
+    source_fingerprint,
+    regions_json_path,
+    settings,
+):
+    """Create the provenance receipt for one completed Phase-A run."""
+    return ps.make_manifest(
+        "phase_a_accidental_camera_motion",
+        source_video=source_fingerprint,
+        inputs={
+            "regions_json_path": str(Path(regions_json_path).resolve()),
+            "regions_json_sha256": ps.hash_json_file(regions_json_path),
+        },
+        settings=settings,
+        outputs={
+            "motion_compensated_video": "motion_compensated_video.mp4",
+            "motion_log_csv": "motion_log.csv",
+            "motion_summary_json": "motion_summary.json",
+            "tracked_regions_json": "tracked_regions.json",
+            "tracked_regions_pkl": "tracked_regions.pkl",
+        },
+    )
+
+
+def phase_a_stale_reasons(
+    *,
+    existing_manifest,
+    current_source,
+    regions_json_path,
+    requested_settings,
+):
+    """Explain exactly why an existing tracked Phase-A result is stale."""
+    reasons = []
+
+    if not ps.same_file_content(
+        existing_manifest.get("source_video", {}),
+        current_source,
+    ):
+        reasons.append("Input video content changed")
+
+    old_regions_hash = existing_manifest.get("inputs", {}).get(
+        "regions_json_sha256"
+    )
+    current_regions_hash = ps.hash_json_file(regions_json_path)
+
+    if old_regions_hash != current_regions_hash:
+        reasons.append("Step 01 regions.json changed (equipment annotations changed)")
+
+    old_settings = existing_manifest.get("settings", {})
+
+    friendly_names = {
+        "tracking_margin_pixels": "tracking margin",
+        "max_corners": "maximum corner count",
+        "min_corner_distance": "minimum corner distance",
+        "min_inliers": "minimum RANSAC inliers",
+        "min_inlier_ratio": "minimum RANSAC inlier ratio",
+        "max_delta_translation_pixels": "maximum per-update translation",
+        "max_delta_rotation_deg": "maximum per-update rotation",
+        "min_delta_scale": "minimum per-update scale",
+        "max_delta_scale": "maximum per-update scale",
+        "max_cumulative_translation_pixels": "maximum cumulative translation",
+        "max_cumulative_rotation_deg": "maximum cumulative rotation",
+        "min_cumulative_scale": "minimum cumulative scale",
+        "max_cumulative_scale": "maximum cumulative scale",
+        "scene_change_warning_frames": "scene-change warning frame count",
+        "show_fixed_polygons": "fixed-polygon debug overlay mode",
+    }
+
+    for key, new_value in requested_settings.items():
+        old_value = old_settings.get(key)
+
+        if old_value != new_value:
+            reasons.append(
+                f"Phase A {friendly_names.get(key, key)} changed "
+                f"({old_value} -> {new_value})"
+            )
+
+    return reasons
+
+
 # ============================================================
 # MAIN
 # ============================================================
@@ -1040,7 +1218,7 @@ def main():
         )
 
     output_dir = build_video_output_dir(video_path, args.output)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    requested_settings = normalized_phase_a_settings(args)
 
     print("\n============================================")
     print("PHASE A - ACCIDENTAL CAMERA MOVEMENT")
@@ -1052,33 +1230,184 @@ def main():
     print(f"Frames      : {total_frames}")
     print(f"Output      : {output_dir}")
 
-    result = compute_transforms(video_path, regions_data, args)
+    # --------------------------------------------------------
+    # CURRENT / STALE / LEGACY / PARTIAL / NEW classification.
+    # --------------------------------------------------------
+    print("\nChecking Phase-A dependencies...")
+    current_source = ps.fingerprint_video(video_path)
+    upstream_warnings = annotation_tracking_warnings(regions_path)
 
-    csv_path, json_path, pkl_path = save_tracking_data(
-        output_dir,
-        video_path,
-        regions_data,
-        result,
+    manifest_path = output_dir / MANIFEST_FILENAME
+    manifest_file_present = ps.file_exists_and_nonempty(manifest_path)
+    tracked_complete = is_phase_a_tracked_complete(output_dir)
+    legacy_complete = (
+        is_phase_a_legacy_complete(output_dir)
+        and not manifest_file_present
+    )
+    partial_output = (
+        ps.has_any_output(output_dir)
+        and not tracked_complete
+        and not legacy_complete
     )
 
-    summary_path = save_summary(output_dir, result)
+    should_process = True
 
-    video_output = write_debug_video(
-        video_path,
-        output_dir,
-        regions_data,
-        result,
-        show_fixed=args.show_fixed_polygons,
-    )
+    if tracked_complete:
+        existing_manifest = ps.load_manifest(manifest_path) or {}
+        stale_reasons = phase_a_stale_reasons(
+            existing_manifest=existing_manifest,
+            current_source=current_source,
+            regions_json_path=regions_path,
+            requested_settings=requested_settings,
+        )
 
-    print("\n============================================")
-    print("PHASE A COMPLETE")
-    print("============================================")
-    print(f"Motion video : {video_output}")
-    print(f"Motion CSV   : {csv_path}")
-    print(f"Tracked JSON : {json_path}")
-    print(f"Tracked PKL  : {pkl_path}")
-    print(f"Summary      : {summary_path}")
+        if not stale_reasons:
+            print("\nPHASE A STATUS: CURRENT")
+            print("Existing output was generated using:")
+            print("  - Current input video")
+            print("  - Current Step 01 annotations")
+            print("  - Same Phase A tracking settings")
+            should_process = ps.prompt_yes_no(
+                "Re-run Phase A anyway?",
+                default=False,
+            )
+        else:
+            print("\nPHASE A STATUS: STALE")
+            print("The existing Phase-A output was made from older inputs/settings:")
+            for reason in stale_reasons:
+                print(f"  - {reason}")
+            should_process = ps.prompt_yes_no(
+                "Re-run Phase A using the current inputs/settings?",
+                default=True,
+            )
+
+    elif legacy_complete:
+        print("\nPHASE A STATUS: LEGACY / UNTRACKED")
+        print(
+            "A complete older Phase-A result exists, but there is no "
+            "phase_a_manifest.json proving which video/annotations/settings "
+            "created it."
+        )
+        should_process = ps.prompt_yes_no(
+            "Re-run once to enable dependency tracking?",
+            default=False,
+        )
+
+    elif partial_output:
+        print("\nPHASE A STATUS: PARTIAL")
+        print("An incomplete Phase-A output folder exists.")
+        should_process = ps.prompt_yes_no(
+            "Restart Phase A from the beginning?",
+            default=True,
+        )
+
+    else:
+        print("\nPHASE A STATUS: NEW")
+        should_process = ps.prompt_yes_no(
+            f'Run Phase A for "{video_path.name}"?',
+            default=True,
+        )
+
+    if not should_process:
+        print("Skipped. Existing output was not changed.")
+        return
+
+    if upstream_warnings:
+        print("\nUPSTREAM TRACKING WARNING")
+        for warning in upstream_warnings:
+            print(f"  - {warning}")
+        print(
+            "The supplied annotations can still be used, but their own "
+            "Step-01 receipt says they were modified after completion."
+        )
+        if not ps.prompt_yes_no(
+            "Continue Phase A with these annotations anyway?",
+            default=False,
+        ):
+            print("Stopped before processing. Existing output was not changed.")
+            return
+
+    # --------------------------------------------------------
+    # Safe rerun. Build the complete replacement in a sibling temp
+    # folder, then promote it only after all outputs + manifest exist.
+    # --------------------------------------------------------
+    working_dir = output_dir.with_name(output_dir.name + ".__processing__")
+
+    if working_dir.exists():
+        print(f"\nRemoving previous incomplete working folder:\n{working_dir}")
+        ps.safe_remove(working_dir)
+
+    working_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        result = compute_transforms(video_path, regions_data, args)
+
+        csv_path, json_path, pkl_path = save_tracking_data(
+            working_dir,
+            video_path,
+            regions_data,
+            result,
+        )
+
+        summary_path = save_summary(working_dir, result)
+
+        video_output = write_debug_video(
+            video_path,
+            working_dir,
+            regions_data,
+            result,
+            show_fixed=args.show_fixed_polygons,
+        )
+
+        if not ps.verify_required_files(working_dir, CORE_COMPLETION_FILES):
+            raise RuntimeError(
+                "Phase A finished but one or more required output files "
+                "are missing or empty."
+            )
+
+        manifest = build_phase_a_manifest(
+            source_fingerprint=current_source,
+            regions_json_path=regions_path,
+            settings=requested_settings,
+        )
+        ps.save_json_atomic(
+            working_dir / MANIFEST_FILENAME,
+            manifest,
+        )
+
+        if not is_phase_a_tracked_complete(working_dir):
+            raise RuntimeError("Tracked Phase-A completion validation failed.")
+
+        ps.promote_completed_directory(
+            working_dir=working_dir,
+            final_dir=output_dir,
+        )
+
+        print("\n============================================")
+        print("PHASE A COMPLETED AND SAVED")
+        print("============================================")
+        print(f"Motion video : {output_dir / video_output.name}")
+        print(f"Motion CSV   : {output_dir / csv_path.name}")
+        print(f"Tracked JSON : {output_dir / json_path.name}")
+        print(f"Tracked PKL  : {output_dir / pkl_path.name}")
+        print(f"Summary      : {output_dir / summary_path.name}")
+        print(f"Manifest     : {output_dir / MANIFEST_FILENAME}")
+
+    except KeyboardInterrupt:
+        print(
+            "\n\nPhase A interrupted. The previous completed output, if any, "
+            "was not replaced."
+            f"\nIncomplete new work is kept at:\n{working_dir}"
+        )
+        raise
+
+    except Exception:
+        print(
+            "\nPhase A failed. The previous completed output, if any, "
+            "was not replaced."
+            f"\nIncomplete new work is kept at:\n{working_dir}"
+        )
+        raise
 
 
 if __name__ == "__main__":
