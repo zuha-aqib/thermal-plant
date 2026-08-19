@@ -9,22 +9,22 @@
     },
     "scale": {
         "bar_roi": [
-            1184,
-            233,
-            34,
-            472
+            1185,
+            234,
+            36,
+            473
         ],
         "max_text_roi": [
             1095,
             174,
-            120,
+            77,
             45
         ],
         "min_text_roi": [
             1097,
-            695,
-            117,
-            44
+            694,
+            124,
+            49
         ],
         "bar_horizontal_inner_fraction": 0.2,
         "display_decimal_places": 1,
@@ -36,7 +36,7 @@
         "reference_ocr_min_temp": 29.2,
         "reference_ocr_max_temp": 74.9,
         "reference_ocr_min_text": "29.20",
-        "reference_ocr_max_text": "74.9",
+        "reference_ocr_max_text": "74.90",
         "min_scale_span_c": 5.0
     }
 }
