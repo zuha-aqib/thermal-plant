@@ -22,10 +22,10 @@ to annotate a specific video:
 py -3.12  step_01_annotate_thermal_video.py "raw-videos/95.fur incin AB Stacks Thermal.mp4"
 ```
 
-to annotate the whole raw-videos folder:
+to annotate the whole raw-videos folder: (its much easier, just run this)
 
 ```powershell
-py -3.12 .\step_01_annotate_thermal_video.py .\raw-videos 
+py -3.12 step_01_annotate_thermal_video.py "raw-videos"
 ```
 
 
@@ -38,6 +38,10 @@ mark the scale and min max temperature and test the ocr
 py -3.12 .\step_02_configure_thermal_scale.py ".\raw-videos\95.fur incin AB Stacks Thermal.mp4" ".\step-01-annotate-videos\95.fur incin AB Stacks Thermal\regions.json" --tesseract "C:\Users\zuha.aqib\AppData\Local\Programs\Tesseract-OCR\tesseract.exe" 
 ```
 
+```powershell
+py -3.12 .\step_02_configure_thermal_scale.py ".\raw-videos\97. A- 200 Corridor Thermal.mp4" ".\step-01-annotate-videos\97. A- 200 Corridor Thermal\regions.json" --tesseract "C:\Users\zuha.aqib\AppData\Local\Programs\Tesseract-OCR\tesseract.exe" 
+```
+
 ## step 3
 apply the scale and annotations to compute the temperature at each pixel and then the ROI (average, min and max of each plant)
 
@@ -47,4 +51,8 @@ apply the scale and annotations to compute the temperature at each pixel and the
 
 ```powershell
 py -3.12 .\step_03_process_thermal_temperatures.py ".\raw-videos\95.fur incin AB Stacks Thermal.mp4" ".\step-01-annotate-videos\95.fur incin AB Stacks Thermal\regions.json" ".\step-02-ocr-scale-config\95.fur incin AB Stacks Thermal\scale_config.json" --tesseract "C:\Users\zuha.aqib\AppData\Local\Programs\Tesseract-OCR\tesseract.exe" --ocr-hz 3 --max-scale-jump 2.0
+```
+
+```powershell
+py -3.12 .\step_03_process_thermal_temperatures.py ".\raw-videos\97. A- 200 Corridor Thermal.mp4" ".\step-01-annotate-videos\97. A- 200 Corridor Thermal\regions.json" ".\step-02-ocr-scale-config\97. A- 200 Corridor Thermal\scale_config.json" --tesseract "C:\Users\zuha.aqib\AppData\Local\Programs\Tesseract-OCR\tesseract.exe" --ocr-hz 3 --max-scale-jump 2.0
 ```
