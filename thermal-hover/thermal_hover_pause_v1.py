@@ -41,7 +41,14 @@ import csv
 import math
 import os
 import time
+import sys
 from pathlib import Path
+
+# Allow this archived V1 file to live inside thermal-hover/ while still
+# importing the parent repo's Step-02/Step-03 modules.
+REPO_PARENT = Path(__file__).resolve().parent.parent
+if str(REPO_PARENT) not in sys.path:
+    sys.path.insert(0, str(REPO_PARENT))
 
 import cv2
 import numpy as np
@@ -60,6 +67,14 @@ from step_03_process_thermal_temperatures import (
 )
 
 # Shared JSON helper from the provenance-aware pipeline.
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import step_code as ps
 
 
