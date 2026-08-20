@@ -1,0 +1,43 @@
+{
+  "format": "thermal_hover_scale_config_v1",
+  "video": {
+    "filename": "91. OXY West Side Thermal.mp4",
+    "width": 1280,
+    "height": 1024,
+    "fps": 24.712489071222006,
+    "total_frames": 7349,
+    "reference_frame_number": 0
+  },
+  "scale": {
+    "bar_roi": [
+      1186,
+      249,
+      34,
+      505
+    ],
+    "max_text_roi": [
+      1081,
+      185,
+      126,
+      51
+    ],
+    "min_text_roi": [
+      1084,
+      741,
+      130,
+      55
+    ],
+    "bar_horizontal_inner_fraction": 0.2,
+    "display_decimal_places": 1,
+    "ocr_padding_pixels": 6,
+    "min_ocr_method": "green_difference",
+    "min_ocr_psm": 7,
+    "max_ocr_method": "green_difference",
+    "max_ocr_psm": 7,
+    "reference_ocr_min_temp": 17.6,
+    "reference_ocr_max_temp": 67.38,
+    "reference_ocr_min_text": "17.6",
+    "reference_ocr_max_text": "67.38",
+    "min_scale_span_c": 5.0
+  }
+}
