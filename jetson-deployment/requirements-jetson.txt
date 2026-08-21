@@ -1,0 +1,7 @@
+# Jetson ARM64 deployment.
+# The current live pipeline uses RapidOCR + OpenVINO.
+numpy==1.26.4
+opencv-python==4.10.0.84
+pytesseract==0.3.13
+rapidocr-openvino==1.4.4
+openvino==2026.2.1

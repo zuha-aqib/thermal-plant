@@ -1,0 +1,17 @@
+# Dockerfile-specific build context filter.
+# The build command uses the repository root as context, but the image does NOT
+# need raw videos, datasets, processed videos, Git history, etc.
+
+**
+
+# Deployment files
+!jetson-deployment/
+!jetson-deployment/Dockerfile
+!jetson-deployment/Dockerfile.dockerignore
+!jetson-deployment/requirements-jetson.txt
+!jetson-deployment/thermal_rtsp_analysis.py
+
+# Root helper modules imported by the live RTSP application
+!step_code.py
+!step_02_configure_thermal_scale.py
+!step_03_process_thermal_temperatures.py
