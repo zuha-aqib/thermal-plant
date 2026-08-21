@@ -1004,10 +1004,6 @@
 │   ├── requirements.txt
 │   ├── thermal_hover_pause_v1.py
 │   └── thermal_hover_video.py
-├── thermal-stream
-│   └── presets
-│       └── cam_realmonitor
-│           └── rapidocr-debug
 ├── .gitignore
 ├── phase_a_accidental_camera_motion.py
 ├── phase_b_scene_change_detector.py
