@@ -1,4 +1,13 @@
 ﻿thermal-plant/
+├── jetson-deployment
+│   ├── Dockerfile
+│   ├── Dockerfile.dockerignore
+│   ├── requirements-jetson.txt
+│   ├── run_jetson.sh
+│   ├── thermal_rtsp_analysis.py
+│   └── verify_jetson.sh
+├── live-camera
+│   └── live_camera_viewer.py
 ├── phase-a-accidental-camera-motion
 │   ├── 95.fur incin AB Stacks Thermal
 │   │   └── accidental_001
@@ -983,6 +992,22 @@
 │   └── 97. A- 200 Corridor Thermal
 │       ├── accidental_001.mp4
 │       └── transformations.json
+├── thermal-analysis
+│   ├── thermal_analysis_viewer.py
+│   ├── thermal_rtsp_analysis.py
+│   └── thermal_rtsp_analysis_rapidocr.py
+├── thermal-hover
+│   ├── data
+│   │   └── 91. OXY West Side Thermal
+│   │       ├── hover_scale_config.json
+│   │       └── hover_scale_config_preview.png
+│   ├── requirements.txt
+│   ├── thermal_hover_pause_v1.py
+│   └── thermal_hover_video.py
+├── thermal-stream
+│   └── presets
+│       └── cam_realmonitor
+│           └── rapidocr-debug
 ├── .gitignore
 ├── phase_a_accidental_camera_motion.py
 ├── phase_b_scene_change_detector.py
@@ -995,5 +1020,4 @@
 ├── step_02_configure_thermal_scale.py
 ├── step_03_process_thermal_temperatures.py
 ├── step_code.py
-├── step_commands_to_run.md
-└── thermal_mouse_hover_viewer.py
+└── step_commands_to_run.md
